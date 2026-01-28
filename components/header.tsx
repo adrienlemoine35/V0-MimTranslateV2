@@ -4,7 +4,7 @@ interface HeaderProps {
   title?: string
 }
 
-export function Header({ title = "Model Information Management V2" }: HeaderProps) {
+export function Header({ title = "MIM Translate SandBox" }: HeaderProps) {
   return (
     <header className="h-16 bg-white border-b border-border px-8 flex items-center justify-between">
       <h1 className="text-xl font-semibold text-foreground">
