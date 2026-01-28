@@ -224,6 +224,13 @@ export function TranslationTable({
   const processedData = useMemo(() => {
     let result = [...hierarchicalData]
 
+    // Apply "missing translations only" filter
+    if (showMissingOnly) {
+      result = result.filter(row => 
+        !getDisplayValue(row.item, 'nameFr') || !getDisplayValue(row.item, 'descriptionFr')
+      )
+    }
+
     // Apply type filter
     if (typeFilters.size > 0) {
       result = result.filter(row => typeFilters.has(row.type))
@@ -266,7 +273,7 @@ export function TranslationTable({
     }
 
     return result
-  }, [hierarchicalData, typeFilters, sortField, sortOrder])
+  }, [hierarchicalData, typeFilters, sortField, sortOrder, showMissingOnly, getDisplayValue])
 
   const getSortIcon = (field: SortField) => {
     if (sortField !== field) {
@@ -457,10 +464,12 @@ export function TranslationTable({
                   </TableCell>
                   <TableCell 
                     className={cn(
-                      "font-medium cursor-pointer",
-                      !getDisplayValue(row.item, 'nameFr') && "bg-amber-200 text-amber-700 italic dark:bg-amber-900 dark:text-amber-200"
+                      "font-medium cursor-pointer relative group",
+                      !getDisplayValue(row.item, 'nameFr') && "bg-amber-200 text-amber-700 italic dark:bg-amber-900 dark:text-amber-200",
+                      row.manyToManyCount && "border-2 border-dashed border-orange-400 dark:border-orange-600"
                     )}
                     onClick={() => handleCellClick(row.item.id, 'nameFr')}
+                    title={row.manyToManyCount ? `⚠️ Cette modification impactera ${row.manyToManyCount} lignes liées` : undefined}
                   >
                     {editingCell?.id === row.item.id && editingCell?.field === 'nameFr' ? (
                       <input
@@ -478,16 +487,23 @@ export function TranslationTable({
                     ) : (
                       getDisplayValue(row.item, 'nameFr') || "Traduction manquante"
                     )}
+                    {row.manyToManyCount && (
+                      <span className="absolute hidden group-hover:block bottom-full left-0 mb-2 w-64 px-3 py-2 text-xs bg-popover text-popover-foreground border border-border rounded-lg shadow-lg z-10">
+                        ⚠️ Attention : Cette modification impactera <strong>{row.manyToManyCount} lignes</strong> qui partagent cette {row.type.toLowerCase()}
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell className="text-sm">
                     {row.item.nameEn}
                   </TableCell>
                   <TableCell 
                     className={cn(
-                      "max-w-xs text-sm cursor-pointer",
-                      !getDisplayValue(row.item, 'descriptionFr') && "bg-amber-200 text-amber-700 italic dark:bg-amber-900 dark:text-amber-200"
+                      "max-w-xs text-sm cursor-pointer relative group",
+                      !getDisplayValue(row.item, 'descriptionFr') && "bg-amber-200 text-amber-700 italic dark:bg-amber-900 dark:text-amber-200",
+                      row.manyToManyCount && "border-2 border-dashed border-orange-400 dark:border-orange-600"
                     )}
                     onClick={() => handleCellClick(row.item.id, 'descriptionFr')}
+                    title={row.manyToManyCount ? `⚠️ Cette modification impactera ${row.manyToManyCount} lignes liées` : undefined}
                   >
                     {editingCell?.id === row.item.id && editingCell?.field === 'descriptionFr' ? (
                       <textarea
@@ -505,6 +521,11 @@ export function TranslationTable({
                       <div className="truncate">
                         {getDisplayValue(row.item, 'descriptionFr') || "Traduction manquante"}
                       </div>
+                    )}
+                    {row.manyToManyCount && (
+                      <span className="absolute hidden group-hover:block bottom-full left-0 mb-2 w-64 px-3 py-2 text-xs bg-popover text-popover-foreground border border-border rounded-lg shadow-lg z-10">
+                        ⚠️ Attention : Cette modification impactera <strong>{row.manyToManyCount} lignes</strong> qui partagent cette {row.type.toLowerCase()}
+                      </span>
                     )}
                   </TableCell>
                   <TableCell className="max-w-xs truncate text-sm">
