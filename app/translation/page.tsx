@@ -1,12 +1,11 @@
 "use client"
 
 import { useState, useMemo, useCallback } from "react"
-import { Filter, AlertTriangle, Languages, Loader2, LayoutList, Layers, Search } from "lucide-react"
+import { AlertTriangle, Languages, Loader2, LayoutList, Layers, Search } from "lucide-react"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { TranslationTable } from "@/components/translation-table"
 import { ValueFirstTable } from "@/components/value-first-table"
-import { TypeFilterAccordion } from "@/components/type-filter-accordion"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
 import { 
@@ -31,8 +30,6 @@ interface TranslationStatus {
 export default function Translation() {
   const { toast } = useToast()
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [showFilter, setShowFilter] = useState(true)
-  const [isFilterCollapsed, setIsFilterCollapsed] = useState(false)
   const [showMissingOnly, setShowMissingOnly] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [viewMode, setViewMode] = useState<ViewMode>("hierarchy")
@@ -362,22 +359,6 @@ export default function Translation() {
                 <AlertTriangle className="w-4 h-4" />
                 Traductions manquantes ({missingTranslationsCount})
               </button>
-              <button
-                onClick={() => {
-                  if (showFilter && !isFilterCollapsed) {
-                    setIsFilterCollapsed(true)
-                  } else if (showFilter && isFilterCollapsed) {
-                    setShowFilter(false)
-                  } else {
-                    setShowFilter(true)
-                    setIsFilterCollapsed(false)
-                  }
-                }}
-                className="flex items-center gap-2 px-3 py-2 text-sm bg-card border border-border rounded-lg hover:bg-muted transition-colors"
-              >
-                <Filter className="w-4 h-4" />
-                {!showFilter ? "Afficher filtres" : isFilterCollapsed ? "Masquer filtres" : "Reduire filtres"}
-              </button>
             </div>
           </div>
           
@@ -402,35 +383,25 @@ export default function Translation() {
             </div>
           </div>
 
-          <div className="flex gap-4">
-            {showFilter && viewMode === "hierarchy" && (
-              <TypeFilterAccordion
+          <div className="flex-1 min-w-0 overflow-auto">
+            {viewMode === "hierarchy" ? (
+              <TranslationTable 
+                data={filteredData} 
+                selectedIds={selectedIds} 
+                showMissingOnly={showMissingOnly}
+                translatedNames={translationStatus.translatedNames}
+                translatedDescriptions={translationStatus.translatedItems}
+                searchQuery={searchQuery}
                 categoryTree={categoryTree}
-                selectedIds={selectedIds}
                 onSelectionChange={setSelectedIds}
-                isCollapsed={isFilterCollapsed}
-                onToggleCollapse={() => setIsFilterCollapsed(!isFilterCollapsed)}
+              />
+            ) : (
+              <ValueFirstTable 
+                data={filteredValueFirstData} 
+                translatedItems={translationStatus.translatedItems}
+                translatedNames={translationStatus.translatedNames}
               />
             )}
-            
-            <div className="flex-1 min-w-0 overflow-auto">
-              {viewMode === "hierarchy" ? (
-                <TranslationTable 
-                  data={filteredData} 
-                  selectedIds={selectedIds} 
-                  showMissingOnly={showMissingOnly}
-                  translatedNames={translationStatus.translatedNames}
-                  translatedDescriptions={translationStatus.translatedItems}
-                  searchQuery={searchQuery}
-                />
-              ) : (
-                <ValueFirstTable 
-                  data={filteredValueFirstData} 
-                  translatedItems={translationStatus.translatedItems}
-                  translatedNames={translationStatus.translatedNames}
-                />
-              )}
-            </div>
           </div>
         </main>
       </div>
