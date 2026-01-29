@@ -129,57 +129,53 @@ export default function Translation() {
 
   // Get items that would actually be shown in the table (after selection filter)
   const visibleItemsInTable = useMemo(() => {
-    const items: UnifiedItem[] = []
-    const addedChars = new Set<string>()
-    const addedVals = new Set<string>()
-    
-    if (selectedIds.size > 0) {
-      // Check if any selected IDs are characteristics or values directly
-      allUnifiedItems.forEach(item => {
-        if (selectedIds.has(item.id)) {
-          if (item.type === "Caractéristique" && !addedChars.has(item.id)) {
-            items.push(item)
-            addedChars.add(item.id)
-          } else if (item.type === "Valeur" && !addedVals.has(item.id)) {
-            items.push(item)
-            addedVals.add(item.id)
-          }
-        }
-      })
-      
-      // Add characteristics and values from selected models
-      filteredData.forEach(item => {
-        if (item.type === "Modèle") {
-          const characteristics = allUnifiedItems.filter(
-            ui => ui.type === "Caractéristique" && ui.modelIds?.includes(item.id)
-          )
-          characteristics.forEach(char => {
-            if (!addedChars.has(char.id)) {
-              items.push(char)
-              addedChars.add(char.id)
-            }
-            
-            if (char.characteristicType === "fermé") {
-              const values = allUnifiedItems.filter(
-                ui => ui.type === "Valeur" && ui.characteristicIds?.includes(char.id)
-              )
-              values.forEach(val => {
-                if (!addedVals.has(val.id)) {
-                  items.push(val)
-                  addedVals.add(val.id)
-                }
-              })
-            }
-          })
-        }
-      })
-    } else {
-      // No selection filter - all items would be shown
-      return allUnifiedItems
+    if (viewMode === "value-first") {
+      // In value-first view, just return the filtered data
+      return filteredValueFirstData.map(({ value }) => value as UnifiedItem)
     }
     
+    // In hierarchy view, we need to include all items from filteredData
+    // plus their characteristics and values
+    const items: UnifiedItem[] = []
+    const addedIds = new Set<string>()
+    
+    // Add all product items from filteredData
+    filteredData.forEach(item => {
+      if (!addedIds.has(item.id)) {
+        items.push(item as UnifiedItem)
+        addedIds.add(item.id)
+      }
+      
+      // If it's a Model, add its characteristics and values
+      if (item.type === "Modèle") {
+        const characteristics = allUnifiedItems.filter(
+          ui => ui.type === "Caractéristique" && ui.modelIds?.includes(item.id)
+        )
+        
+        characteristics.forEach(char => {
+          if (!addedIds.has(char.id)) {
+            items.push(char)
+            addedIds.add(char.id)
+          }
+          
+          // Add values for closed characteristics
+          if (char.characteristicType === "fermé") {
+            const values = allUnifiedItems.filter(
+              ui => ui.type === "Valeur" && ui.characteristicIds?.includes(char.id)
+            )
+            values.forEach(val => {
+              if (!addedIds.has(val.id)) {
+                items.push(val)
+                addedIds.add(val.id)
+              }
+            })
+          }
+        })
+      }
+    })
+    
     return items
-  }, [selectedIds, filteredData, allUnifiedItems])
+  }, [viewMode, filteredData, filteredValueFirstData, allUnifiedItems])
   
   // Items with missing translations that are VISIBLE in the current filtered table
   const itemsMissingTranslations = useMemo(() => {
@@ -338,7 +334,7 @@ export default function Translation() {
             <div className="flex items-center gap-3">
               <button
                 onClick={handleAutoTranslate}
-                disabled={translationStatus.isLoading || itemsMissingTranslations.length === 0}
+                disabled={translationStatus.isLoading || missingTranslationsCount === 0}
                 className="flex items-center gap-2 px-3 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {translationStatus.isLoading ? (
@@ -346,7 +342,7 @@ export default function Translation() {
                 ) : (
                   <Languages className="w-4 h-4" />
                 )}
-                Traduire via DeepL ({itemsMissingTranslations.length})
+                Traduire via DeepL ({missingTranslationsCount})
               </button>
               <button
                 onClick={() => setShowMissingOnly(!showMissingOnly)}
