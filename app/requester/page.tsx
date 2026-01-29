@@ -418,15 +418,6 @@ export default function RequesterPage() {
                     )}
                     Traduire via DeepL ({missingTranslationsCount})
                   </button>
-                  {itemsWithModifications.length > 0 && (
-                    <button
-                      onClick={handleBulkAddToBasket}
-                      className="flex items-center gap-2 px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                    >
-                      <ShoppingCart className="w-4 h-4" />
-                      Tout ajouter ({itemsWithModifications.length})
-                    </button>
-                  )}
                   <button
                     onClick={() => setShowMissingOnly(!showMissingOnly)}
                     className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${
@@ -499,7 +490,9 @@ export default function RequesterPage() {
                     translatedDescriptions={translationStatus.translatedItems}
                     searchQuery={searchQuery}
                     onAddToBasket={handleAddToBasket}
+                    onBulkAddToBasket={handleBulkAddToBasket}
                     isItemInBasket={isItemInDraft}
+                    modifiedItemsCount={itemsWithModifications.length}
                   />
                 </div>
               </div>

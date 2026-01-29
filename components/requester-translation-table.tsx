@@ -44,7 +44,9 @@ interface RequesterTranslationTableProps {
   translatedDescriptions?: Map<string, string>
   searchQuery?: string
   onAddToBasket: (item: UnifiedItem, proposedNameFr: string, proposedDescriptionFr: string) => void
+  onBulkAddToBasket?: () => void
   isItemInBasket: (itemId: string) => boolean
+  modifiedItemsCount?: number
 }
 
 export function RequesterTranslationTable({ 
@@ -56,7 +58,9 @@ export function RequesterTranslationTable({
   translatedDescriptions, 
   searchQuery = "",
   onAddToBasket,
-  isItemInBasket
+  onBulkAddToBasket,
+  isItemInBasket,
+  modifiedItemsCount = 0
 }: RequesterTranslationTableProps) {
   const [editingCell, setEditingCell] = useState<{ id: string; field: 'nameFr' | 'descriptionFr' } | null>(null)
   const [editedValues, setEditedValues] = useState<Map<string, { nameFr?: string; descriptionFr?: string }>>(new Map())
@@ -259,7 +263,22 @@ export function RequesterTranslationTable({
             <TableHead className="font-semibold text-foreground">Name EN</TableHead>
             <TableHead className="font-semibold text-foreground">Description FR</TableHead>
             <TableHead className="font-semibold text-foreground">Description EN</TableHead>
-            <TableHead className="font-semibold text-foreground w-24 text-center">Panier</TableHead>
+            <TableHead className="font-semibold text-foreground w-32 text-center sticky right-0 bg-muted/50 shadow-[-2px_0_4px_rgba(0,0,0,0.1)]">
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-xs">Panier</span>
+                {modifiedItemsCount > 0 && onBulkAddToBasket && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={onBulkAddToBasket}
+                    className="h-6 px-2 text-xs bg-green-600 text-white border-green-600 hover:bg-green-700 hover:text-white"
+                  >
+                    <Plus className="w-3 h-3 mr-1" />
+                    Tout ({modifiedItemsCount})
+                  </Button>
+                )}
+              </div>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -350,7 +369,11 @@ export function RequesterTranslationTable({
                     )}
                   </TableCell>
                   <TableCell className="max-w-xs truncate text-sm">{item.descriptionEn}</TableCell>
-                  <TableCell className="text-center">
+                  <TableCell className={cn(
+                    "text-center sticky right-0 shadow-[-2px_0_4px_rgba(0,0,0,0.08)]",
+                    inBasket && "bg-green-50",
+                    !inBasket && "bg-card"
+                  )}>
                     {inBasket ? (
                       <Button
                         variant="ghost"
@@ -362,10 +385,10 @@ export function RequesterTranslationTable({
                       </Button>
                     ) : hasEdits ? (
                       <Button
-                        variant="outline"
+                        variant="default"
                         size="sm"
                         onClick={() => handleAddToBasket(item, type)}
-                        className="text-primary hover:text-primary"
+                        className="bg-primary text-primary-foreground hover:bg-primary/90"
                       >
                         <Plus className="w-4 h-4" />
                       </Button>
