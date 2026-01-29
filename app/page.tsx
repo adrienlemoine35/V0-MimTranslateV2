@@ -17,18 +17,13 @@ export default function ModelInformationManagement() {
   const actionCards = [
     {
       icon: FileText,
-      title: "Add value(s) to single model",
-      description: "Create or add a value for one specific model and characteristic",
+      title: "Personae Requester",
+      description: "Translation system for Requester persona",
     },
     {
       icon: Layers,
-      title: "Add value(s) to several models",
-      description: "Create or add a value across multiple models",
-    },
-    {
-      icon: Package,
-      title: "3P Brand Creation",
-      description: "Create a third-party brand with automatic duplicate detection",
+      title: "Personae BU",
+      description: "Translation system for BU persona",
     },
   ]
 
