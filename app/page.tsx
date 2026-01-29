@@ -25,17 +25,32 @@ export default function ModelInformationManagement() {
   // Get counts for badges
   const pendingForBU = useMemo(() => {
     void refreshKey
-    return getPendingRequestsForBU().length
+    try {
+      return getPendingRequestsForBU().length
+    } catch (error) {
+      console.error("[v0] Error getting pending requests:", error)
+      return 0
+    }
   }, [refreshKey])
 
   const completedForRequester = useMemo(() => {
     void refreshKey
-    return getCompletedRequests().filter(r => !r.buComment?.includes('[seen]')).length
+    try {
+      return getCompletedRequests().filter(r => !r.buComment?.includes('[seen]')).length
+    } catch (error) {
+      console.error("[v0] Error getting completed requests:", error)
+      return 0
+    }
   }, [refreshKey])
 
   const draftItemCount = useMemo(() => {
     void refreshKey
-    return getDraftItemCount()
+    try {
+      return getDraftItemCount()
+    } catch (error) {
+      console.error("[v0] Error getting draft item count:", error)
+      return 0
+    }
   }, [refreshKey])
 
   const actionCards = [
