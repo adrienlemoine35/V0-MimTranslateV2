@@ -476,7 +476,7 @@ export function TranslationTable({
                           }}
                         />
                         {row.manyToManyCount && (
-                          <div className="absolute -top-12 left-0 right-0 bg-orange-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg z-50 flex items-center gap-2 whitespace-nowrap animate-in fade-in slide-in-from-bottom-2">
+                          <div className="absolute -top-12 left-0 bg-orange-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg z-50 flex items-center gap-2 whitespace-nowrap animate-in fade-in slide-in-from-bottom-2 w-max">
                             <span className="text-base">⚠️</span>
                             <span className="font-medium">
                               Attention : Cette modification impactera {row.manyToManyCount} lignes liées
@@ -512,7 +512,7 @@ export function TranslationTable({
                           }}
                         />
                         {row.manyToManyCount && (
-                          <div className="absolute -top-12 left-0 right-0 bg-orange-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg z-50 flex items-center gap-2 whitespace-nowrap animate-in fade-in slide-in-from-bottom-2">
+                          <div className="absolute -top-12 left-0 bg-orange-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg z-50 flex items-center gap-2 whitespace-nowrap animate-in fade-in slide-in-from-bottom-2 w-max">
                             <span className="text-base">⚠️</span>
                             <span className="font-medium">
                               Attention : Cette modification impactera {row.manyToManyCount} lignes liées
