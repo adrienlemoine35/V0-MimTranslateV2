@@ -145,6 +145,14 @@ export default function RequesterPage() {
     return data
   }, [selectedIds, showMissingOnly, searchQuery, translationStatus.translatedItems, translationStatus.translatedNames, getAllDescendantsOfSelected])
 
+  // Items with modifications (translated or edited) - must be defined before handleBulkAddToBasket
+  const itemsWithModifications = useMemo(() => {
+    return filteredData.filter(item => 
+      translationStatus.translatedNames?.has(item.id) || 
+      translationStatus.translatedItems?.has(item.id)
+    )
+  }, [filteredData, translationStatus])
+
   // Handle bulk add to basket (add all modified items)
   const handleBulkAddToBasket = useCallback(() => {
     if (itemsWithModifications.length === 0) {
@@ -237,14 +245,6 @@ export default function RequesterPage() {
       (!item.nameFr && item.nameEn) || (!item.descriptionFr && item.descriptionEn)
     )
   }, [allUnifiedItems])
-
-  // Items with modifications (translated or edited)
-  const itemsWithModifications = useMemo(() => {
-    return filteredData.filter(item => 
-      translationStatus.translatedNames?.has(item.id) || 
-      translationStatus.translatedItems?.has(item.id)
-    )
-  }, [filteredData, translationStatus])
 
   // Count missing translations
   const missingTranslationsCount = itemsMissingTranslations.length
