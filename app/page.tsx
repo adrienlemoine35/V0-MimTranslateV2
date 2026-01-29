@@ -1,29 +1,59 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
+import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { TabNavigation } from "@/components/tab-navigation"
 import { ActionCard } from "@/components/action-card"
 import { ImportantNotes } from "@/components/important-notes"
-import { FileText, Layers, Package } from "lucide-react"
+import { UserCircle, Users } from "lucide-react"
+import { 
+  getPendingRequestsForBU, 
+  getCompletedRequests, 
+  getDraftItemCount 
+} from "@/lib/validation-store"
 
 export default function ModelInformationManagement() {
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState("Value")
   const [selectedCard, setSelectedCard] = useState(0)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   const tabs = ["Dashboard", "Model", "Characteristic", "Value"]
 
+  // Get counts for badges
+  const pendingForBU = useMemo(() => {
+    void refreshKey
+    return getPendingRequestsForBU().length
+  }, [refreshKey])
+
+  const completedForRequester = useMemo(() => {
+    void refreshKey
+    return getCompletedRequests().filter(r => !r.buComment?.includes('[seen]')).length
+  }, [refreshKey])
+
+  const draftItemCount = useMemo(() => {
+    void refreshKey
+    return getDraftItemCount()
+  }, [refreshKey])
+
   const actionCards = [
     {
-      icon: FileText,
+      icon: UserCircle,
       title: "Personae Requester",
-      description: "Translation system for Requester persona",
+      description: "Creer et soumettre des demandes de traduction pour validation par le BU",
+      route: "/requester",
+      badge: completedForRequester + draftItemCount,
+      badgeLabel: completedForRequester > 0 ? "reponse(s) du BU" : "dans le panier",
     },
     {
-      icon: Layers,
+      icon: Users,
       title: "Personae BU",
-      description: "Translation system for BU persona",
+      description: "Valider, modifier ou refuser les demandes de traduction des Requesters",
+      route: "/bu",
+      badge: pendingForBU,
+      badgeLabel: "demande(s) a traiter",
     },
   ]
 
@@ -55,7 +85,14 @@ export default function ModelInformationManagement() {
                 title={card.title}
                 description={card.description}
                 isSelected={selectedCard === index}
-                onClick={() => setSelectedCard(index)}
+                badge={card.badge}
+                badgeLabel={card.badgeLabel}
+                onClick={() => {
+                  setSelectedCard(index)
+                  if (card.route) {
+                    router.push(card.route)
+                  }
+                }}
               />
             ))}
           </div>
