@@ -39,6 +39,7 @@ interface RequesterTranslationTableProps {
   data: ProductItem[]
   selectedIds?: Set<string>
   showMissingOnly?: boolean
+  showModifiedOnly?: boolean
   translatedNames?: Map<string, string>
   translatedDescriptions?: Map<string, string>
   searchQuery?: string
@@ -49,7 +50,8 @@ interface RequesterTranslationTableProps {
 export function RequesterTranslationTable({ 
   data, 
   selectedIds, 
-  showMissingOnly = false, 
+  showMissingOnly = false,
+  showModifiedOnly = false,
   translatedNames, 
   translatedDescriptions, 
   searchQuery = "",
@@ -221,6 +223,12 @@ export function RequesterTranslationTable({
   if (showMissingOnly) {
     finalData = finalData.filter(({ item }) => {
       return !item.nameFr || !item.descriptionFr
+    })
+  }
+
+  if (showModifiedOnly) {
+    finalData = finalData.filter(({ item }) => {
+      return translatedNames?.has(item.id) || translatedDescriptions?.has(item.id)
     })
   }
   

@@ -61,6 +61,7 @@ export default function RequesterPage() {
   const [showMissingOnly, setShowMissingOnly] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [refreshKey, setRefreshKey] = useState(0)
+  const [showModifiedOnly, setShowModifiedOnly] = useState(false)
   const [translationStatus, setTranslationStatus] = useState<TranslationStatus>({
     isLoading: false,
     error: null,
@@ -144,6 +145,44 @@ export default function RequesterPage() {
     return data
   }, [selectedIds, showMissingOnly, searchQuery, translationStatus.translatedItems, translationStatus.translatedNames, getAllDescendantsOfSelected])
 
+  // Handle bulk add to basket (add all modified items)
+  const handleBulkAddToBasket = useCallback(() => {
+    if (itemsWithModifications.length === 0) {
+      toast({
+        title: "Aucun element modifie",
+        description: "Veuillez modifier au moins une traduction avant d'ajouter au panier",
+        variant: "destructive"
+      })
+      return
+    }
+
+    let addedCount = 0
+    itemsWithModifications.forEach(item => {
+      const nameFr = translationStatus.translatedNames?.get(item.id) || item.nameFr || ''
+      const descriptionFr = translationStatus.translatedItems?.get(item.id) || item.descriptionFr || ''
+      
+      if (nameFr || descriptionFr) {
+        addItemToDraft({
+          itemId: item.id,
+          itemType: item.type,
+          nameEn: item.nameEn,
+          descriptionEn: item.descriptionEn,
+          originalNameFr: item.nameFr || '',
+          originalDescriptionFr: item.descriptionFr || '',
+          proposedNameFr: nameFr,
+          proposedDescriptionFr: descriptionFr
+        })
+        addedCount++
+      }
+    })
+
+    setRefreshKey(k => k + 1)
+    toast({
+      title: "Elements ajoutes au panier",
+      description: `${addedCount} traduction(s) modifiee(s) ont ete ajoutees a votre demande de validation`,
+    })
+  }, [itemsWithModifications, translationStatus, toast])
+
   // Handle adding translation to basket
   const handleAddToBasket = useCallback((item: UnifiedItem, proposedNameFr: string, proposedDescriptionFr: string) => {
     addItemToDraft({
@@ -198,6 +237,14 @@ export default function RequesterPage() {
       (!item.nameFr && item.nameEn) || (!item.descriptionFr && item.descriptionEn)
     )
   }, [allUnifiedItems])
+
+  // Items with modifications (translated or edited)
+  const itemsWithModifications = useMemo(() => {
+    return filteredData.filter(item => 
+      translationStatus.translatedNames?.has(item.id) || 
+      translationStatus.translatedItems?.has(item.id)
+    )
+  }, [filteredData, translationStatus])
 
   // Count missing translations
   const missingTranslationsCount = itemsMissingTranslations.length
@@ -367,6 +414,15 @@ export default function RequesterPage() {
                     )}
                     Traduire via DeepL ({missingTranslationsCount})
                   </button>
+                  {itemsWithModifications.length > 0 && (
+                    <button
+                      onClick={handleBulkAddToBasket}
+                      className="flex items-center gap-2 px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                      <ShoppingCart className="w-4 h-4" />
+                      Tout ajouter ({itemsWithModifications.length})
+                    </button>
+                  )}
                   <button
                     onClick={() => setShowMissingOnly(!showMissingOnly)}
                     className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${
@@ -377,6 +433,17 @@ export default function RequesterPage() {
                   >
                     <AlertTriangle className="w-4 h-4" />
                     Manquantes ({missingTranslationsCount})
+                  </button>
+                  <button
+                    onClick={() => setShowModifiedOnly(!showModifiedOnly)}
+                    className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${
+                      showModifiedOnly 
+                        ? "bg-blue-600 text-white hover:bg-blue-700" 
+                        : "bg-card border border-border hover:bg-muted"
+                    }`}
+                  >
+                    <Languages className="w-4 h-4" />
+                    Modifiees ({itemsWithModifications.length})
                   </button>
                   <button
                     onClick={() => setShowFilter(!showFilter)}
@@ -423,6 +490,7 @@ export default function RequesterPage() {
                     data={filteredData} 
                     selectedIds={selectedIds} 
                     showMissingOnly={showMissingOnly}
+                    showModifiedOnly={showModifiedOnly}
                     translatedNames={translationStatus.translatedNames}
                     translatedDescriptions={translationStatus.translatedItems}
                     searchQuery={searchQuery}
