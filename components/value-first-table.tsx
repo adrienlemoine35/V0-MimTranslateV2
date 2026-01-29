@@ -137,7 +137,7 @@ export function ValueFirstTable({ data, translatedItems = new Map(), translatedN
                           Valeur
                         </span>
                         {models.length > 1 && (
-                          <Badge variant="outline" className="text-xs px-1.5 py-0 h-5">
+                          <Badge className="text-xs px-1.5 py-0 h-5 bg-orange-500 text-white hover:bg-orange-600">
                             ×{models.length}
                           </Badge>
                         )}
@@ -219,7 +219,7 @@ export function ValueFirstTable({ data, translatedItems = new Map(), translatedN
                               Caract.
                             </span>
                             {isCharShared && (
-                              <Badge variant="outline" className="text-xs px-1.5 py-0 h-5">
+                              <Badge className="text-xs px-1.5 py-0 h-5 bg-orange-500 text-white hover:bg-orange-600">
                                 ×{char.modelIds.length}
                               </Badge>
                             )}

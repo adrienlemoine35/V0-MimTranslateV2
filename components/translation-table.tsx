@@ -148,6 +148,15 @@ export function TranslationTable({
   const hierarchicalData = useMemo(() => {
     const rows: HierarchyRow[] = []
 
+    // Count how many times each model appears (many-to-many for models)
+    const modelParentCount = new Map<string, number>()
+    data.forEach(item => {
+      if (item.type === "Modèle") {
+        const count = modelParentCount.get(item.id) || 0
+        modelParentCount.set(item.id, count + 1)
+      }
+    })
+
     // Build hierarchy from product data
     const buildHierarchy = (items: ProductItem[], parentId: string | null = null, depth: number = 0) => {
       const children = items.filter(item => item.parentId === parentId)
@@ -155,11 +164,17 @@ export function TranslationTable({
       children.forEach(item => {
         const hasChildren = items.some(i => i.parentId === item.id) || item.type === "Modèle"
         
+        // For Modèles, check if they appear in multiple regroupements
+        const manyToManyCount = item.type === "Modèle" 
+          ? (modelParentCount.get(item.id) || 1) 
+          : undefined
+        
         rows.push({
           item,
           type: item.type,
           depth,
           hasChildren,
+          manyToManyCount: manyToManyCount && manyToManyCount > 1 ? manyToManyCount : undefined,
           parentRowId: parentId || undefined
         })
 
@@ -442,8 +457,7 @@ export function TranslationTable({
                       </span>
                       {row.manyToManyCount && (
                         <Badge 
-                          variant="secondary" 
-                          className="text-xs px-1.5 py-0 h-5 bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200"
+                          className="text-xs px-1.5 py-0 h-5 bg-orange-500 text-white hover:bg-orange-600"
                           title={`Cette ${row.type.toLowerCase()} est partagée par ${row.manyToManyCount} éléments`}
                         >
                           ×{row.manyToManyCount}
