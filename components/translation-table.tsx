@@ -147,8 +147,6 @@ export function TranslationTable({
   // Build hierarchical structure
   const hierarchicalData = useMemo(() => {
     const rows: HierarchyRow[] = []
-    const addedCharacteristics = new Set<string>()
-    const addedValues = new Set<string>()
 
     // Build hierarchy from product data
     const buildHierarchy = (items: ProductItem[], parentId: string | null = null, depth: number = 0) => {
@@ -175,40 +173,34 @@ export function TranslationTable({
             const characteristics = getCharacteristicsForModel(item.id)
             
             characteristics.forEach(char => {
-              if (!addedCharacteristics.has(char.id)) {
-                const manyToManyCount = char.modelIds.length
-                const charHasChildren = char.characteristicType === "fermé"
+              const manyToManyCount = char.modelIds.length
+              const charHasChildren = char.characteristicType === "fermé"
+              
+              rows.push({
+                item: char,
+                type: "Caractéristique",
+                depth: depth + 1,
+                hasChildren: charHasChildren,
+                manyToManyCount: manyToManyCount > 1 ? manyToManyCount : undefined,
+                parentRowId: item.id
+              })
+              
+              // If characteristic is expanded and closed type, show values
+              if (expandedRows.has(char.id) && char.characteristicType === "fermé") {
+                const values = getValuesForCharacteristic(char.id)
                 
-                rows.push({
-                  item: char,
-                  type: "Caractéristique",
-                  depth: depth + 1,
-                  hasChildren: charHasChildren,
-                  manyToManyCount: manyToManyCount > 1 ? manyToManyCount : undefined,
-                  parentRowId: item.id
-                })
-                addedCharacteristics.add(char.id)
-                
-                // If characteristic is expanded and closed type, show values
-                if (expandedRows.has(char.id) && char.characteristicType === "fermé") {
-                  const values = getValuesForCharacteristic(char.id)
+                values.forEach(val => {
+                  const valueManyToManyCount = val.characteristicIds.length
                   
-                  values.forEach(val => {
-                    if (!addedValues.has(val.id)) {
-                      const valueManyToManyCount = val.characteristicIds.length
-                      
-                      rows.push({
-                        item: val,
-                        type: "Valeur",
-                        depth: depth + 2,
-                        hasChildren: false,
-                        manyToManyCount: valueManyToManyCount > 1 ? valueManyToManyCount : undefined,
-                        parentRowId: char.id
-                      })
-                      addedValues.add(val.id)
-                    }
+                  rows.push({
+                    item: val,
+                    type: "Valeur",
+                    depth: depth + 2,
+                    hasChildren: false,
+                    manyToManyCount: valueManyToManyCount > 1 ? valueManyToManyCount : undefined,
+                    parentRowId: char.id
                   })
-                }
+                })
               }
             })
           }
@@ -464,33 +456,36 @@ export function TranslationTable({
                   </TableCell>
                   <TableCell 
                     className={cn(
-                      "font-medium cursor-pointer relative group",
-                      !getDisplayValue(row.item, 'nameFr') && "bg-amber-200 text-amber-700 italic dark:bg-amber-900 dark:text-amber-200",
-                      row.manyToManyCount && "border-2 border-dashed border-orange-400 dark:border-orange-600"
+                      "font-medium cursor-pointer relative",
+                      !getDisplayValue(row.item, 'nameFr') && "bg-amber-200 text-amber-700 italic dark:bg-amber-900 dark:text-amber-200"
                     )}
                     onClick={() => handleCellClick(row.item.id, 'nameFr')}
-                    title={row.manyToManyCount ? `⚠️ Cette modification impactera ${row.manyToManyCount} lignes liées` : undefined}
                   >
                     {editingCell?.id === row.item.id && editingCell?.field === 'nameFr' ? (
-                      <input
-                        type="text"
-                        autoFocus
-                        className="w-full bg-transparent border-none outline-none focus:ring-2 focus:ring-primary rounded px-1"
-                        value={getDisplayValue(row.item, 'nameFr') || ''}
-                        onChange={(e) => handleCellChange(row.item.id, 'nameFr', e.target.value)}
-                        onBlur={handleCellBlur}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleCellBlur()
-                          if (e.key === 'Escape') handleCellBlur()
-                        }}
-                      />
+                      <div className="relative">
+                        <input
+                          type="text"
+                          autoFocus
+                          className="w-full bg-transparent border-none outline-none focus:ring-2 focus:ring-primary rounded px-1"
+                          value={getDisplayValue(row.item, 'nameFr') || ''}
+                          onChange={(e) => handleCellChange(row.item.id, 'nameFr', e.target.value)}
+                          onBlur={handleCellBlur}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleCellBlur()
+                            if (e.key === 'Escape') handleCellBlur()
+                          }}
+                        />
+                        {row.manyToManyCount && (
+                          <div className="absolute -top-12 left-0 right-0 bg-orange-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg z-50 flex items-center gap-2 whitespace-nowrap animate-in fade-in slide-in-from-bottom-2">
+                            <span className="text-base">⚠️</span>
+                            <span className="font-medium">
+                              Attention : Cette modification impactera {row.manyToManyCount} lignes liées
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     ) : (
                       getDisplayValue(row.item, 'nameFr') || "Traduction manquante"
-                    )}
-                    {row.manyToManyCount && (
-                      <span className="absolute hidden group-hover:block bottom-full left-0 mb-2 w-64 px-3 py-2 text-xs bg-popover text-popover-foreground border border-border rounded-lg shadow-lg z-10">
-                        ⚠️ Attention : Cette modification impactera <strong>{row.manyToManyCount} lignes</strong> qui partagent cette {row.type.toLowerCase()}
-                      </span>
                     )}
                   </TableCell>
                   <TableCell className="text-sm">
@@ -498,34 +493,37 @@ export function TranslationTable({
                   </TableCell>
                   <TableCell 
                     className={cn(
-                      "max-w-xs text-sm cursor-pointer relative group",
-                      !getDisplayValue(row.item, 'descriptionFr') && "bg-amber-200 text-amber-700 italic dark:bg-amber-900 dark:text-amber-200",
-                      row.manyToManyCount && "border-2 border-dashed border-orange-400 dark:border-orange-600"
+                      "max-w-xs text-sm cursor-pointer relative",
+                      !getDisplayValue(row.item, 'descriptionFr') && "bg-amber-200 text-amber-700 italic dark:bg-amber-900 dark:text-amber-200"
                     )}
                     onClick={() => handleCellClick(row.item.id, 'descriptionFr')}
-                    title={row.manyToManyCount ? `⚠️ Cette modification impactera ${row.manyToManyCount} lignes liées` : undefined}
                   >
                     {editingCell?.id === row.item.id && editingCell?.field === 'descriptionFr' ? (
-                      <textarea
-                        autoFocus
-                        rows={2}
-                        className="w-full bg-transparent border-none outline-none focus:ring-2 focus:ring-primary rounded px-1 resize-none"
-                        value={getDisplayValue(row.item, 'descriptionFr') || ''}
-                        onChange={(e) => handleCellChange(row.item.id, 'descriptionFr', e.target.value)}
-                        onBlur={handleCellBlur}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Escape') handleCellBlur()
-                        }}
-                      />
+                      <div className="relative">
+                        <textarea
+                          autoFocus
+                          rows={2}
+                          className="w-full bg-transparent border-none outline-none focus:ring-2 focus:ring-primary rounded px-1 resize-none"
+                          value={getDisplayValue(row.item, 'descriptionFr') || ''}
+                          onChange={(e) => handleCellChange(row.item.id, 'descriptionFr', e.target.value)}
+                          onBlur={handleCellBlur}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Escape') handleCellBlur()
+                          }}
+                        />
+                        {row.manyToManyCount && (
+                          <div className="absolute -top-12 left-0 right-0 bg-orange-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg z-50 flex items-center gap-2 whitespace-nowrap animate-in fade-in slide-in-from-bottom-2">
+                            <span className="text-base">⚠️</span>
+                            <span className="font-medium">
+                              Attention : Cette modification impactera {row.manyToManyCount} lignes liées
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     ) : (
                       <div className="truncate">
                         {getDisplayValue(row.item, 'descriptionFr') || "Traduction manquante"}
                       </div>
-                    )}
-                    {row.manyToManyCount && (
-                      <span className="absolute hidden group-hover:block bottom-full left-0 mb-2 w-64 px-3 py-2 text-xs bg-popover text-popover-foreground border border-border rounded-lg shadow-lg z-10">
-                        ⚠️ Attention : Cette modification impactera <strong>{row.manyToManyCount} lignes</strong> qui partagent cette {row.type.toLowerCase()}
-                      </span>
                     )}
                   </TableCell>
                   <TableCell className="max-w-xs truncate text-sm">
