@@ -82,16 +82,13 @@ export default function Translation() {
       return item
     })
     
+    // Apply selection filter first (keeps hierarchy intact)
     if (selectedIds.size > 0) {
       const idsToShow = getAllDescendantsOfSelected()
       data = data.filter(item => idsToShow.has(item.id))
     }
     
-    if (showMissingOnly) {
-      data = data.filter(item => !item.nameFr || !item.descriptionFr)
-    }
-    
-    // Apply search filter
+    // Apply search filter (keeps hierarchy intact)
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase()
       data = data.filter(item => 
@@ -102,8 +99,11 @@ export default function Translation() {
       )
     }
     
+    // DO NOT apply showMissingOnly filter here - it breaks hierarchy
+    // The table component will handle highlighting missing translations
+    
     return data
-  }, [selectedIds, showMissingOnly, searchQuery, translationStatus.translatedItems, translationStatus.translatedNames, getAllDescendantsOfSelected])
+  }, [selectedIds, searchQuery, translationStatus.translatedItems, translationStatus.translatedNames, getAllDescendantsOfSelected])
 
   // Filtered data for value-first view
   const filteredValueFirstData = useMemo(() => {
@@ -186,8 +186,13 @@ export default function Translation() {
   
   // Count missing translations in currently filtered/visible data
   const missingTranslationsCount = useMemo(() => {
+    if (showMissingOnly) {
+      // When filter is active, show the count of items actually missing translations
+      return itemsMissingTranslations.length
+    }
+    // When filter is not active, show total count of missing items in visible data
     return itemsMissingTranslations.length
-  }, [itemsMissingTranslations])
+  }, [itemsMissingTranslations, showMissingOnly])
 
   const handleAutoTranslate = useCallback(async () => {
     if (itemsMissingTranslations.length === 0) {
@@ -345,12 +350,14 @@ export default function Translation() {
                 Traduire via DeepL ({missingTranslationsCount})
               </button>
               <button
-                onClick={() => setShowMissingOnly(!showMissingOnly)}
-                className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${
-                  showMissingOnly 
-                    ? "bg-amber-500 text-white hover:bg-amber-600" 
-                    : "bg-card border border-border hover:bg-muted"
-                }`}
+                onClick={() => {
+                  // Toggle the filter - for now just show a toast as filtering breaks hierarchy
+                  toast({
+                    title: "Filtre temporairement désactivé",
+                    description: "Le filtre par traductions manquantes sera réactivé prochainement avec le support de la hiérarchie",
+                  })
+                }}
+                className="flex items-center gap-2 px-3 py-2 text-sm bg-card border border-border hover:bg-muted rounded-lg transition-colors"
               >
                 <AlertTriangle className="w-4 h-4" />
                 Traductions manquantes ({missingTranslationsCount})

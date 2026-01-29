@@ -231,13 +231,6 @@ export function TranslationTable({
   const processedData = useMemo(() => {
     let result = [...hierarchicalData]
 
-    // Apply "missing translations only" filter
-    if (showMissingOnly) {
-      result = result.filter(row => 
-        !getDisplayValue(row.item, 'nameFr') || !getDisplayValue(row.item, 'descriptionFr')
-      )
-    }
-
     // Apply type filter
     if (typeFilters.size > 0) {
       result = result.filter(row => typeFilters.has(row.type))
@@ -280,7 +273,7 @@ export function TranslationTable({
     }
 
     return result
-  }, [hierarchicalData, typeFilters, sortField, sortOrder, showMissingOnly, getDisplayValue])
+  }, [hierarchicalData, typeFilters, sortField, sortOrder])
 
   const getSortIcon = (field: SortField) => {
     if (sortField !== field) {
