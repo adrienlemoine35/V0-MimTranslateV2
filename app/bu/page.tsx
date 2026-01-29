@@ -7,12 +7,14 @@ import {
   CheckCircle2,
   Eye,
   FileText,
-  Inbox
+  Inbox,
+  Table
 } from "lucide-react"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { BURequestList } from "@/components/bu-request-list"
 import { BURequestReview } from "@/components/bu-request-review"
+import { TranslationTable } from "@/components/translation-table"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
 import Link from "next/link"
@@ -27,7 +29,7 @@ import {
   type ItemStatus
 } from "@/lib/validation-store"
 
-type ViewTab = "pending" | "completed"
+type ViewTab = "pending" | "completed" | "normal"
 
 export default function BUPage() {
   const { toast } = useToast()
@@ -128,6 +130,17 @@ export default function BUPage() {
               {/* Tab navigation */}
               <div className="flex items-center gap-1 bg-muted rounded-lg p-1 mb-6 w-fit">
                 <button
+                  onClick={() => setActiveTab("normal")}
+                  className={`flex items-center gap-2 px-4 py-2 text-sm rounded-md transition-colors ${
+                    activeTab === "normal"
+                      ? "bg-card text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Table className="w-4 h-4" />
+                  Tableau Normal
+                </button>
+                <button
                   onClick={() => setActiveTab("pending")}
                   className={`flex items-center gap-2 px-4 py-2 text-sm rounded-md transition-colors ${
                     activeTab === "pending"
@@ -156,7 +169,9 @@ export default function BUPage() {
                 </button>
               </div>
 
-              {activeTab === "pending" ? (
+              {activeTab === "normal" ? (
+                <TranslationTable />
+              ) : activeTab === "pending" ? (
                 <BURequestList 
                   requests={pendingRequests}
                   onSelectRequest={handleSelectRequest}

@@ -1,5 +1,5 @@
 // Validation Request Store - Shared state between Requester and BU personas
-// For demo purposes, we use a simple in-memory store that persists during the session
+// Uses localStorage to persist data across page navigations and refreshes
 
 export type RequestStatus = 'draft' | 'pending' | 'in_review' | 'completed'
 export type ItemStatus = 'pending' | 'approved' | 'modified' | 'rejected'
@@ -23,15 +23,38 @@ export interface ValidationRequest {
   id: string
   requesterId: string
   status: RequestStatus
-  createdAt: Date
-  submittedAt?: Date
-  completedAt?: Date
+  createdAt: string // ISO string for JSON serialization
+  submittedAt?: string
+  completedAt?: string
   buComment?: string // Comment from BU at the request level
   items: TranslationItem[]
 }
 
-// In-memory store for demo
-let validationRequests: ValidationRequest[] = []
+const STORAGE_KEY = 'validation_requests'
+
+// Get validation requests from localStorage
+function getValidationRequestsFromStorage(): ValidationRequest[] {
+  if (typeof window === 'undefined') return []
+  
+  try {
+    const data = localStorage.getItem(STORAGE_KEY)
+    return data ? JSON.parse(data) : []
+  } catch (error) {
+    console.error('[v0] Error reading validation requests from storage:', error)
+    return []
+  }
+}
+
+// Save validation requests to localStorage
+function saveValidationRequestsToStorage(requests: ValidationRequest[]): void {
+  if (typeof window === 'undefined') return
+  
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(requests))
+  } catch (error) {
+    console.error('[v0] Error saving validation requests to storage:', error)
+  }
+}
 
 // Generate unique ID
 export function generateId(): string {
@@ -40,53 +63,64 @@ export function generateId(): string {
 
 // Get all requests
 export function getAllRequests(): ValidationRequest[] {
-  return validationRequests
+  return getValidationRequestsFromStorage()
 }
 
 // Get requests by status
 export function getRequestsByStatus(status: RequestStatus): ValidationRequest[] {
-  return validationRequests.filter(req => req.status === status)
+  return getValidationRequestsFromStorage().filter(req => req.status === status)
 }
 
 // Get pending requests for BU (pending or in_review)
 export function getPendingRequestsForBU(): ValidationRequest[] {
-  return validationRequests.filter(req => 
+  return getValidationRequestsFromStorage().filter(req => 
     req.status === 'pending' || req.status === 'in_review'
   )
 }
 
 // Get completed requests for Requester
 export function getCompletedRequests(): ValidationRequest[] {
-  return validationRequests.filter(req => req.status === 'completed')
+  return getValidationRequestsFromStorage().filter(req => req.status === 'completed')
 }
 
 // Get draft request for current requester (there should only be one active draft)
 export function getDraftRequest(): ValidationRequest | undefined {
-  return validationRequests.find(req => req.status === 'draft')
+  return getValidationRequestsFromStorage().find(req => req.status === 'draft')
 }
 
 // Create a new draft request
 export function createDraftRequest(): ValidationRequest {
-  const existingDraft = getDraftRequest()
+  const requests = getValidationRequestsFromStorage()
+  const existingDraft = requests.find(req => req.status === 'draft')
   if (existingDraft) return existingDraft
   
   const newRequest: ValidationRequest = {
     id: generateId(),
     requesterId: 'requester_1', // For demo, we use a fixed requester
     status: 'draft',
-    createdAt: new Date(),
+    createdAt: new Date().toISOString(),
     items: []
   }
   
-  validationRequests.push(newRequest)
+  requests.push(newRequest)
+  saveValidationRequestsToStorage(requests)
   return newRequest
 }
 
 // Add item to draft request
 export function addItemToDraft(item: Omit<TranslationItem, 'id' | 'status'>): TranslationItem {
-  let draft = getDraftRequest()
+  const requests = getValidationRequestsFromStorage()
+  let draft = requests.find(req => req.status === 'draft')
+  
   if (!draft) {
-    draft = createDraftRequest()
+    draft = {
+      id: generateId(),
+      requesterId: 'requester_1',
+      status: 'draft',
+      createdAt: new Date().toISOString(),
+      items: []
+    }
+    requests.push(draft)
   }
   
   // Check if item already exists in draft
@@ -106,50 +140,60 @@ export function addItemToDraft(item: Omit<TranslationItem, 'id' | 'status'>): Tr
     draft.items.push(newItem)
   }
   
+  saveValidationRequestsToStorage(requests)
   return newItem
 }
 
 // Remove item from draft
 export function removeItemFromDraft(itemId: string): void {
-  const draft = getDraftRequest()
+  const requests = getValidationRequestsFromStorage()
+  const draft = requests.find(req => req.status === 'draft')
   if (!draft) return
   
   draft.items = draft.items.filter(item => item.itemId !== itemId)
+  saveValidationRequestsToStorage(requests)
 }
 
 // Update item in draft
 export function updateItemInDraft(itemId: string, updates: Partial<TranslationItem>): void {
-  const draft = getDraftRequest()
+  const requests = getValidationRequestsFromStorage()
+  const draft = requests.find(req => req.status === 'draft')
   if (!draft) return
   
   const itemIndex = draft.items.findIndex(item => item.itemId === itemId)
   if (itemIndex >= 0) {
     draft.items[itemIndex] = { ...draft.items[itemIndex], ...updates }
   }
+  
+  saveValidationRequestsToStorage(requests)
 }
 
 // Submit draft request for validation
 export function submitDraftRequest(): ValidationRequest | null {
-  const draft = getDraftRequest()
+  const requests = getValidationRequestsFromStorage()
+  const draft = requests.find(req => req.status === 'draft')
   if (!draft || draft.items.length === 0) return null
   
   draft.status = 'pending'
-  draft.submittedAt = new Date()
+  draft.submittedAt = new Date().toISOString()
   
+  saveValidationRequestsToStorage(requests)
   return draft
 }
 
 // Get request by ID
 export function getRequestById(id: string): ValidationRequest | undefined {
-  return validationRequests.find(req => req.id === id)
+  return getValidationRequestsFromStorage().find(req => req.id === id)
 }
 
 // BU: Start reviewing a request
 export function startReviewingRequest(requestId: string): ValidationRequest | null {
-  const request = getRequestById(requestId)
+  const requests = getValidationRequestsFromStorage()
+  const request = requests.find(req => req.id === requestId)
   if (!request || request.status !== 'pending') return null
   
   request.status = 'in_review'
+  saveValidationRequestsToStorage(requests)
   return request
 }
 
@@ -161,7 +205,8 @@ export function updateItemByBU(
   finalDescriptionFr: string,
   status: ItemStatus
 ): void {
-  const request = getRequestById(requestId)
+  const requests = getValidationRequestsFromStorage()
+  const request = requests.find(req => req.id === requestId)
   if (!request) return
   
   const item = request.items.find(i => i.id === itemId)
@@ -170,11 +215,14 @@ export function updateItemByBU(
   item.finalNameFr = finalNameFr
   item.finalDescriptionFr = finalDescriptionFr
   item.status = status
+  
+  saveValidationRequestsToStorage(requests)
 }
 
 // BU: Complete the request
 export function completeRequest(requestId: string, comment?: string): ValidationRequest | null {
-  const request = getRequestById(requestId)
+  const requests = getValidationRequestsFromStorage()
+  const request = requests.find(req => req.id === requestId)
   if (!request) return null
   
   // Check if all items have been processed
@@ -185,22 +233,25 @@ export function completeRequest(requestId: string, comment?: string): Validation
   if (!allProcessed) return null
   
   request.status = 'completed'
-  request.completedAt = new Date()
+  request.completedAt = new Date().toISOString()
   if (comment) {
     request.buComment = comment
   }
   
+  saveValidationRequestsToStorage(requests)
   return request
 }
 
 // Clear draft (for testing/demo purposes)
 export function clearDraft(): void {
-  validationRequests = validationRequests.filter(req => req.status !== 'draft')
+  const requests = getValidationRequestsFromStorage()
+  const filtered = requests.filter(req => req.status !== 'draft')
+  saveValidationRequestsToStorage(filtered)
 }
 
 // Reset all data (for testing/demo purposes)
 export function resetAllData(): void {
-  validationRequests = []
+  saveValidationRequestsToStorage([])
 }
 
 // Get count of items in current draft
