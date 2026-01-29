@@ -128,30 +128,34 @@ export default function RequesterPage() {
       data = data.filter(item => idsToShow.has(item.id))
     }
     
-    if (showMissingOnly) {
-      data = data.filter(item => !item.nameFr || !item.descriptionFr)
-    }
-    
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase()
-      data = data.filter(item => 
-        item.nameFr?.toLowerCase().includes(query) ||
-        item.nameEn?.toLowerCase().includes(query) ||
-        item.descriptionFr?.toLowerCase().includes(query) ||
-        item.descriptionEn?.toLowerCase().includes(query)
-      )
-    }
+    // Note: showMissingOnly, showModifiedOnly, and searchQuery filters 
+    // are applied in the table component after flattening all data types
     
     return data
-  }, [selectedIds, showMissingOnly, searchQuery, translationStatus.translatedItems, translationStatus.translatedNames, getAllDescendantsOfSelected])
+  }, [selectedIds, translationStatus.translatedItems, translationStatus.translatedNames, getAllDescendantsOfSelected])
 
   // Items with modifications (translated or edited) - must be defined before handleBulkAddToBasket
+  // Count all modified items from the entire database, not just filtered data
   const itemsWithModifications = useMemo(() => {
-    return filteredData.filter(item => 
+    const allData = productDatabase.map(item => {
+      const translatedDesc = translationStatus.translatedItems.get(item.id)
+      const translatedName = translationStatus.translatedNames?.get(item.id)
+      
+      if (translatedDesc || translatedName) {
+        return { 
+          ...item, 
+          ...(translatedDesc && { descriptionFr: translatedDesc }),
+          ...(translatedName && { nameFr: translatedName })
+        }
+      }
+      return item
+    })
+    
+    return allData.filter(item => 
       translationStatus.translatedNames?.has(item.id) || 
       translationStatus.translatedItems?.has(item.id)
     )
-  }, [filteredData, translationStatus])
+  }, [translationStatus])
 
   // Handle bulk add to basket (add all modified items)
   const handleBulkAddToBasket = useCallback(() => {
