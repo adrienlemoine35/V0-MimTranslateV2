@@ -1,34 +1,74 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
+import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { TabNavigation } from "@/components/tab-navigation"
 import { ActionCard } from "@/components/action-card"
 import { ImportantNotes } from "@/components/important-notes"
-import { FileText, Layers, Package } from "lucide-react"
+import { UserCircle, Users } from "lucide-react"
+import { 
+  getPendingRequestsForBU, 
+  getCompletedRequests, 
+  getDraftItemCount 
+} from "@/lib/validation-store"
 
 export default function ModelInformationManagement() {
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState("Value")
   const [selectedCard, setSelectedCard] = useState(0)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   const tabs = ["Dashboard", "Model", "Characteristic", "Value"]
 
+  // Get counts for badges
+  const pendingForBU = useMemo(() => {
+    void refreshKey
+    try {
+      return getPendingRequestsForBU().length
+    } catch (error) {
+      console.error("[v0] Error getting pending requests:", error)
+      return 0
+    }
+  }, [refreshKey])
+
+  const completedForRequester = useMemo(() => {
+    void refreshKey
+    try {
+      return getCompletedRequests().filter(r => !r.buComment?.includes('[seen]')).length
+    } catch (error) {
+      console.error("[v0] Error getting completed requests:", error)
+      return 0
+    }
+  }, [refreshKey])
+
+  const draftItemCount = useMemo(() => {
+    void refreshKey
+    try {
+      return getDraftItemCount()
+    } catch (error) {
+      console.error("[v0] Error getting draft item count:", error)
+      return 0
+    }
+  }, [refreshKey])
+
   const actionCards = [
     {
-      icon: FileText,
-      title: "Add value(s) to single model",
-      description: "Create or add a value for one specific model and characteristic",
+      icon: UserCircle,
+      title: "Personae Requester",
+      description: "Creer et soumettre des demandes de traduction pour validation par le BU",
+      route: "/requester",
+      badge: completedForRequester + draftItemCount,
+      badgeLabel: completedForRequester > 0 ? "reponse(s) du BU" : "dans le panier",
     },
     {
-      icon: Layers,
-      title: "Add value(s) to several models",
-      description: "Create or add a value across multiple models",
-    },
-    {
-      icon: Package,
-      title: "3P Brand Creation",
-      description: "Create a third-party brand with automatic duplicate detection",
+      icon: Users,
+      title: "Personae BU",
+      description: "Valider, modifier ou refuser les demandes de traduction des Requesters",
+      route: "/bu",
+      badge: pendingForBU,
+      badgeLabel: "demande(s) a traiter",
     },
   ]
 
@@ -60,7 +100,14 @@ export default function ModelInformationManagement() {
                 title={card.title}
                 description={card.description}
                 isSelected={selectedCard === index}
-                onClick={() => setSelectedCard(index)}
+                badge={card.badge}
+                badgeLabel={card.badgeLabel}
+                onClick={() => {
+                  setSelectedCard(index)
+                  if (card.route) {
+                    router.push(card.route)
+                  }
+                }}
               />
             ))}
           </div>
