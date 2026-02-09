@@ -28,6 +28,7 @@ import {
   type ValidationRequest,
   type ItemStatus
 } from "@/lib/validation-store"
+import { productDatabase } from "@/lib/product-database"
 
 type ViewTab = "pending" | "completed" | "normal"
 
@@ -170,7 +171,7 @@ export default function BUPage() {
               </div>
 
               {activeTab === "normal" ? (
-                <TranslationTable />
+                <TranslationTable data={productDatabase} />
               ) : activeTab === "pending" ? (
                 <BURequestList 
                   requests={pendingRequests}
