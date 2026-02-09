@@ -136,7 +136,7 @@ const descriptionTranslations = {
 };
 
 // Read the database file
-const dbPath = path.join(__dirname, '..', 'lib', 'product-database.ts');
+const dbPath = '/vercel/share/v0-project/lib/product-database.ts';
 let content = fs.readFileSync(dbPath, 'utf-8');
 
 console.log('[v0] Starting translation addition...');
