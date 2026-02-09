@@ -1,13 +1,15 @@
 "use client"
 
 import { useState, useMemo, useCallback } from "react"
-import { AlertTriangle, Languages, Loader2, LayoutList, Layers, Search } from "lucide-react"
+import { AlertTriangle, Languages, Loader2, LayoutList, Layers, Search, ChevronRight, ChevronDown, Check } from "lucide-react"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { TranslationTable } from "@/components/translation-table"
 import { ValueFirstTable } from "@/components/value-first-table"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
+import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
 import { 
   productDatabase, 
   buildCategoryTree, 
@@ -27,10 +29,146 @@ interface TranslationStatus {
   translatedNames?: Map<string, string> // id -> translated nameFr
 }
 
+const levelColors: Record<string, string> = {
+  "Rayon": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+  "Sous-Rayon": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+  "Regroupement": "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
+  "Modèle": "bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-200",
+  "Caractéristique": "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+  "Valeur": "bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200",
+}
+
+interface MissingFilterTreeProps {
+  categoryTree: any[]
+  selectedIds: Set<string>
+  onSelectionChange: (ids: Set<string>) => void
+  itemsMissingTranslations: any[]
+}
+
+function MissingFilterTree({ categoryTree, selectedIds, onSelectionChange, itemsMissingTranslations }: MissingFilterTreeProps) {
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set())
+  const missingIds = new Set(itemsMissingTranslations.map(item => item.id))
+
+  const toggleExpanded = (id: string) => {
+    const newExpanded = new Set(expandedNodes)
+    if (newExpanded.has(id)) {
+      newExpanded.delete(id)
+    } else {
+      newExpanded.add(id)
+    }
+    setExpandedNodes(newExpanded)
+  }
+
+  const getAllDescendantIds = (node: any): string[] => {
+    const ids = [node.id]
+    for (const child of node.children) {
+      ids.push(...getAllDescendantIds(child))
+    }
+    return ids
+  }
+
+  const toggleSelection = (node: any, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const newSelection = new Set(selectedIds)
+    const allIds = getAllDescendantIds(node)
+    
+    const isSelected = selectedIds.has(node.id)
+    
+    if (isSelected) {
+      allIds.forEach(id => newSelection.delete(id))
+    } else {
+      allIds.forEach(id => newSelection.add(id))
+    }
+    
+    onSelectionChange(newSelection)
+  }
+
+  const countMissingInBranch = (node: any): number => {
+    let count = missingIds.has(node.id) ? 1 : 0
+    for (const child of node.children) {
+      count += countMissingInBranch(child)
+    }
+    return count
+  }
+
+  const renderNode = (node: any, depth: number = 0) => {
+    const isExpanded = expandedNodes.has(node.id)
+    const hasChildren = node.children.length > 0
+    const isSelected = selectedIds.has(node.id)
+    const missingCount = countMissingInBranch(node)
+    
+    if (missingCount === 0) return null
+
+    return (
+      <div key={node.id}>
+        <div 
+          className={cn(
+            "flex items-center gap-2 py-1.5 px-2 rounded-md cursor-pointer hover:bg-muted transition-colors",
+            depth > 0 && "ml-4"
+          )}
+          onClick={() => hasChildren && toggleExpanded(node.id)}
+        >
+          {hasChildren ? (
+            <button className="w-4 h-4 flex items-center justify-center text-muted-foreground">
+              {isExpanded ? (
+                <ChevronDown className="w-3 h-3" />
+              ) : (
+                <ChevronRight className="w-3 h-3" />
+              )}
+            </button>
+          ) : (
+            <span className="w-4" />
+          )}
+          
+          <button
+            onClick={(e) => toggleSelection(node, e)}
+            className={cn(
+              "w-4 h-4 rounded border flex items-center justify-center transition-colors",
+              isSelected && "bg-primary border-primary",
+              !isSelected && "border-border hover:border-primary"
+            )}
+          >
+            {isSelected && (
+              <Check className="w-3 h-3 text-white" />
+            )}
+          </button>
+
+          <span className={cn("text-xs px-1.5 py-0.5 rounded font-medium", levelColors[node.level])}>
+            {node.level}
+          </span>
+          
+          <span className="text-sm text-foreground truncate flex-1">
+            {node.nameFr}
+          </span>
+          
+          {missingCount > 0 && (
+            <Badge className="text-xs px-1.5 py-0 h-5 ml-auto bg-amber-500 text-white">
+              {missingCount}
+            </Badge>
+          )}
+        </div>
+
+        {hasChildren && isExpanded && (
+          <div className="border-l border-border ml-4">
+            {node.children.map((child: any) => renderNode(child, depth + 1))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-0.5">
+      {categoryTree.map(node => renderNode(node))}
+    </div>
+  )
+}
+
 export default function Translation() {
   const { toast } = useToast()
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [showMissingOnly, setShowMissingOnly] = useState(false)
+  const [showMissingFilter, setShowMissingFilter] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [viewMode, setViewMode] = useState<ViewMode>("hierarchy")
   const [translationStatus, setTranslationStatus] = useState<TranslationStatus>({
@@ -349,19 +487,62 @@ export default function Translation() {
                 )}
                 Traduire via DeepL ({missingTranslationsCount})
               </button>
-              <button
-                onClick={() => {
-                  // Toggle the filter - for now just show a toast as filtering breaks hierarchy
-                  toast({
-                    title: "Filtre temporairement désactivé",
-                    description: "Le filtre par traductions manquantes sera réactivé prochainement avec le support de la hiérarchie",
-                  })
-                }}
-                className="flex items-center gap-2 px-3 py-2 text-sm bg-card border border-border hover:bg-muted rounded-lg transition-colors"
-              >
-                <AlertTriangle className="w-4 h-4" />
-                Traductions manquantes ({missingTranslationsCount})
-              </button>
+              <div className="relative">
+                <button
+                  onClick={() => setShowMissingFilter(!showMissingFilter)}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors",
+                    showMissingFilter
+                      ? "bg-amber-500 text-white hover:bg-amber-600"
+                      : "bg-card border border-border hover:bg-muted"
+                  )}
+                >
+                  <AlertTriangle className="w-4 h-4" />
+                  Traductions manquantes ({missingTranslationsCount})
+                </button>
+                {showMissingFilter && (
+                  <div className="absolute right-0 top-full mt-2 w-96 bg-card border border-border rounded-lg shadow-lg z-50 p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-semibold text-sm">Filtrer par éléments manquants</h3>
+                      <button 
+                        onClick={() => setShowMissingFilter(false)}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Sélectionnez les branches à afficher. Seuls les éléments avec traductions manquantes seront visibles.
+                    </p>
+                    <div className="max-h-96 overflow-y-auto border border-border rounded-lg p-2">
+                      {/* Tree with checkboxes will be rendered here */}
+                      <MissingFilterTree 
+                        categoryTree={categoryTree}
+                        selectedIds={selectedIds}
+                        onSelectionChange={setSelectedIds}
+                        itemsMissingTranslations={itemsMissingTranslations}
+                      />
+                    </div>
+                    <div className="mt-3 pt-3 border-t flex justify-between">
+                      <button
+                        onClick={() => {
+                          setSelectedIds(new Set())
+                          setShowMissingFilter(false)
+                        }}
+                        className="text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        Réinitialiser
+                      </button>
+                      <button
+                        onClick={() => setShowMissingFilter(false)}
+                        className="text-xs bg-primary text-primary-foreground px-3 py-1.5 rounded-md hover:bg-primary/90"
+                      >
+                        Appliquer
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           
