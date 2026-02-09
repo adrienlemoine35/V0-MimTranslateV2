@@ -45,6 +45,7 @@ interface RequesterTranslationTableProps {
   translatedDescriptions?: Map<string, string>
   searchQuery?: string
   onAddToBasket?: (item: UnifiedItem, proposedNameFr: string, proposedDescriptionFr: string) => void
+  onRemoveFromBasket?: (itemId: string) => void
   onBulkAddToBasket?: () => void
   isItemInBasket?: (itemId: string) => boolean
   modifiedItemsCount?: number
@@ -61,6 +62,7 @@ export function RequesterTranslationTable({
   translatedDescriptions, 
   searchQuery = "",
   onAddToBasket,
+  onRemoveFromBasket,
   onBulkAddToBasket,
   isItemInBasket,
   modifiedItemsCount = 0,
@@ -310,18 +312,16 @@ export function RequesterTranslationTable({
                 })}
             {showBasketColumn && (
               <TableHead className="font-semibold text-foreground w-32 text-center sticky right-0 bg-muted/50 shadow-[-2px_0_4px_rgba(0,0,0,0.1)]">
-                <div className="flex flex-col items-center gap-1">
-                  <span className="text-xs">Panier</span>
+                <div className="flex flex-col items-center gap-1.5">
+                  <span className="text-xs font-semibold">Panier</span>
                   {modifiedItemsCount > 0 && onBulkAddToBasket && (
-                    <Button
-                      size="sm"
-                      variant="outline"
+                    <button
                       onClick={onBulkAddToBasket}
-                      className="h-6 px-2 text-xs bg-green-600 text-white border-green-600 hover:bg-green-700 hover:text-white"
+                      className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
                     >
-                      <Plus className="w-3 h-3 mr-1" />
-                      Tout ({modifiedItemsCount})
-                    </Button>
+                      <Plus className="w-3 h-3" />
+                      Ajouter tout ({modifiedItemsCount})
+                    </button>
                   )}
                 </div>
               </TableHead>
@@ -447,14 +447,12 @@ export function RequesterTranslationTable({
                       !inBasket && "bg-card"
                     )}>
                       {inBasket ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled
-                          className="text-green-600"
+                        <button
+                          onClick={() => onRemoveFromBasket?.(item.id)}
+                          className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 transition-colors"
                         >
-                          <Check className="w-4 h-4" />
-                        </Button>
+                          Retirer
+                        </button>
                       ) : hasEdits ? (
                         <Button
                           variant="default"

@@ -554,6 +554,7 @@ export default function RequesterPage() {
                       translatedDescriptions={translationStatus.translatedItems}
                       searchQuery={searchQuery}
                       onAddToBasket={handleAddToBasket}
+                      onRemoveFromBasket={handleRemoveFromBasket}
                       onBulkAddToBasket={handleBulkAddToBasket}
                       isItemInBasket={isItemInDraft}
                       modifiedItemsCount={itemsWithModifications.length}
