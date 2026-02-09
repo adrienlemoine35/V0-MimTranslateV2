@@ -14,7 +14,7 @@ import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { BURequestList } from "@/components/bu-request-list"
 import { BURequestReview } from "@/components/bu-request-review"
-import { TranslationTable } from "@/components/translation-table"
+import { RequesterTranslationTable } from "@/components/requester-translation-table"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
 import Link from "next/link"
@@ -34,7 +34,7 @@ type ViewTab = "pending" | "completed" | "normal"
 
 export default function BUPage() {
   const { toast } = useToast()
-  const [activeTab, setActiveTab] = useState<ViewTab>("pending")
+  const [activeTab, setActiveTab] = useState<ViewTab>("normal")
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
 
@@ -139,7 +139,7 @@ export default function BUPage() {
                   }`}
                 >
                   <Table className="w-4 h-4" />
-                  Tableau Normal
+                  Tableau
                 </button>
                 <button
                   onClick={() => setActiveTab("pending")}
@@ -171,7 +171,7 @@ export default function BUPage() {
               </div>
 
               {activeTab === "normal" ? (
-                <TranslationTable data={productDatabase} />
+                <RequesterTranslationTable data={productDatabase} />
               ) : activeTab === "pending" ? (
                 <BURequestList 
                   requests={pendingRequests}
