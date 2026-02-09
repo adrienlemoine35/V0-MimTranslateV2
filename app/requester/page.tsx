@@ -13,14 +13,18 @@ import {
   CheckCircle2,
   XCircle,
   ArrowLeft,
-  Trash2
+  Trash2,
+  Settings
 } from "lucide-react"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { RequesterTranslationTable } from "@/components/requester-translation-table"
+import { ValueFirstTable } from "@/components/value-first-table"
 import { TypeFilterAccordion } from "@/components/type-filter-accordion"
 import { RequestBasket } from "@/components/request-basket"
 import { RequestHistory } from "@/components/request-history"
+import { ColumnSettingsPanel, type ColumnConfig } from "@/components/column-settings-panel"
+import { ToggleButton } from "@/components/ui/toggle-button"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
 import Link from "next/link"
@@ -28,6 +32,7 @@ import {
   productDatabase, 
   buildCategoryTree, 
   getAllUnifiedItems,
+  getValueFirstView,
   type ProductItem,
   type UnifiedItem 
 } from "@/lib/product-database"
@@ -44,6 +49,7 @@ import {
 } from "@/lib/validation-store"
 
 type ViewTab = "translate" | "basket" | "history"
+type ViewMode = "hierarchy" | "value-first"
 
 interface TranslationStatus {
   isLoading: boolean
@@ -55,6 +61,7 @@ interface TranslationStatus {
 export default function RequesterPage() {
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState<ViewTab>("translate")
+  const [viewMode, setViewMode] = useState<ViewMode>("hierarchy")
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [showFilter, setShowFilter] = useState(true)
   const [isFilterCollapsed, setIsFilterCollapsed] = useState(false)
@@ -62,6 +69,13 @@ export default function RequesterPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [refreshKey, setRefreshKey] = useState(0)
   const [showModifiedOnly, setShowModifiedOnly] = useState(false)
+  const [showColumnSettings, setShowColumnSettings] = useState(false)
+  const [columnConfig, setColumnConfig] = useState<ColumnConfig[]>([
+    { id: 'name-es', label: 'Name ES', enabled: false, order: 0 },
+    { id: 'name-it', label: 'Name IT', enabled: false, order: 1 },
+    { id: 'description-es', label: 'Description ES', enabled: false, order: 2 },
+    { id: 'description-it', label: 'Description IT', enabled: false, order: 3 },
+  ])
   const [translationStatus, setTranslationStatus] = useState<TranslationStatus>({
     isLoading: false,
     error: null,
@@ -71,6 +85,7 @@ export default function RequesterPage() {
   
   const categoryTree = useMemo(() => buildCategoryTree(), [])
   const allUnifiedItems = useMemo(() => getAllUnifiedItems(), [])
+  const valueFirstData = useMemo(() => getValueFirstView(), [])
   
   // Get current draft request
   const draftRequest = useMemo(() => {
@@ -133,6 +148,28 @@ export default function RequesterPage() {
     
     return data
   }, [selectedIds, translationStatus.translatedItems, translationStatus.translatedNames, getAllDescendantsOfSelected])
+
+  // Filtered data for value-first view
+  const filteredValueFirstData = useMemo(() => {
+    let data = valueFirstData
+    
+    if (showMissingOnly) {
+      data = data.filter(({ value }) => !value.nameFr || !value.descriptionFr)
+    }
+    
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      data = data.filter(({ value }) => 
+        value.nameFr?.toLowerCase().includes(query) ||
+        value.nameEn?.toLowerCase().includes(query) ||
+        value.descriptionFr?.toLowerCase().includes(query) ||
+        value.descriptionEn?.toLowerCase().includes(query) ||
+        value.id?.toLowerCase().includes(query)
+      )
+    }
+    
+    return data
+  }, [valueFirstData, showMissingOnly, searchQuery])
 
   // Items with modifications (translated or edited) - must be defined before handleBulkAddToBasket
   // Count all modified items from the entire database, not just filtered data
@@ -402,8 +439,33 @@ export default function RequesterPage() {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-4">
                   <h2 className="text-lg font-semibold text-foreground">
-                    Catalogue produits ({filteredData.length} elements)
+                    {viewMode === "hierarchy"
+                      ? `Catalogue produits (${filteredData.length} elements)`
+                      : `Vue Value First (${filteredValueFirstData.length} valeurs)`
+                    }
                   </h2>
+                  <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+                    <button
+                      onClick={() => setViewMode("hierarchy")}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                        viewMode === "hierarchy"
+                          ? "bg-card text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      Hierarchie
+                    </button>
+                    <button
+                      onClick={() => setViewMode("value-first")}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                        viewMode === "value-first"
+                          ? "bg-card text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      Value First
+                    </button>
+                  </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <button
@@ -418,34 +480,41 @@ export default function RequesterPage() {
                     )}
                     Traduire via DeepL ({missingTranslationsCount})
                   </button>
-                  <button
-                    onClick={() => setShowMissingOnly(!showMissingOnly)}
-                    className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${
-                      showMissingOnly 
-                        ? "bg-amber-500 text-white hover:bg-amber-600" 
-                        : "bg-card border border-border hover:bg-muted"
-                    }`}
+                  <ToggleButton
+                    pressed={showMissingOnly}
+                    onPressedChange={(value) => {
+                      setShowMissingOnly(value)
+                      if (value) setShowModifiedOnly(false)
+                    }}
+                    variant="amber"
                   >
                     <AlertTriangle className="w-4 h-4" />
-                    Manquantes ({missingTranslationsCount})
-                  </button>
-                  <button
-                    onClick={() => setShowModifiedOnly(!showModifiedOnly)}
-                    className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${
-                      showModifiedOnly 
-                        ? "bg-blue-600 text-white hover:bg-blue-700" 
-                        : "bg-card border border-border hover:bg-muted"
-                    }`}
+                    Manquantes uniquement ({missingTranslationsCount})
+                  </ToggleButton>
+                  <ToggleButton
+                    pressed={showModifiedOnly}
+                    onPressedChange={(value) => {
+                      setShowModifiedOnly(value)
+                      if (value) setShowMissingOnly(false)
+                    }}
+                    variant="blue"
                   >
                     <Languages className="w-4 h-4" />
-                    Modifiees ({itemsWithModifications.length})
-                  </button>
+                    Modifiees uniquement ({itemsWithModifications.length})
+                  </ToggleButton>
                   <button
                     onClick={() => setShowFilter(!showFilter)}
                     className="flex items-center gap-2 px-3 py-2 text-sm bg-card border border-border rounded-lg hover:bg-muted transition-colors"
                   >
                     <Filter className="w-4 h-4" />
                     {showFilter ? "Masquer filtres" : "Afficher filtres"}
+                  </button>
+                  <button
+                    onClick={() => setShowColumnSettings(true)}
+                    className="flex items-center gap-2 px-3 py-2 text-sm bg-card border border-border rounded-lg hover:bg-muted transition-colors"
+                  >
+                    <Settings className="w-4 h-4" />
+                    Parametres
                   </button>
                 </div>
               </div>
@@ -470,7 +539,7 @@ export default function RequesterPage() {
               </div>
 
               <div className="flex gap-4">
-                {showFilter && (
+                {showFilter && viewMode === "hierarchy" && (
                   <TypeFilterAccordion
                     categoryTree={categoryTree}
                     selectedIds={selectedIds}
@@ -481,19 +550,29 @@ export default function RequesterPage() {
                 )}
                 
                 <div className="flex-1 min-w-0 overflow-auto">
-                  <RequesterTranslationTable 
-                    data={filteredData} 
-                    selectedIds={selectedIds} 
-                    showMissingOnly={showMissingOnly}
-                    showModifiedOnly={showModifiedOnly}
-                    translatedNames={translationStatus.translatedNames}
-                    translatedDescriptions={translationStatus.translatedItems}
-                    searchQuery={searchQuery}
-                    onAddToBasket={handleAddToBasket}
-                    onBulkAddToBasket={handleBulkAddToBasket}
-                    isItemInBasket={isItemInDraft}
-                    modifiedItemsCount={itemsWithModifications.length}
-                  />
+                  {viewMode === "hierarchy" ? (
+                    <RequesterTranslationTable 
+                      data={filteredData} 
+                      selectedIds={selectedIds} 
+                      showMissingOnly={showMissingOnly}
+                      showModifiedOnly={showModifiedOnly}
+                      translatedNames={translationStatus.translatedNames}
+                      translatedDescriptions={translationStatus.translatedItems}
+                      searchQuery={searchQuery}
+                      onAddToBasket={handleAddToBasket}
+                      onRemoveFromBasket={handleRemoveFromBasket}
+                      onBulkAddToBasket={handleBulkAddToBasket}
+                      isItemInBasket={isItemInDraft}
+                      modifiedItemsCount={itemsWithModifications.length}
+                      columnConfig={columnConfig}
+                    />
+                  ) : (
+                    <ValueFirstTable 
+                      data={filteredValueFirstData}
+                      translatedItems={translationStatus.translatedItems}
+                      translatedNames={translationStatus.translatedNames}
+                    />
+                  )}
                 </div>
               </div>
             </>
@@ -515,6 +594,12 @@ export default function RequesterPage() {
         </main>
       </div>
       <Toaster />
+      <ColumnSettingsPanel 
+        isOpen={showColumnSettings}
+        onClose={() => setShowColumnSettings(false)}
+        columns={columnConfig}
+        onColumnsChange={setColumnConfig}
+      />
     </div>
   )
 }

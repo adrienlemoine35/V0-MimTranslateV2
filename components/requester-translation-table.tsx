@@ -23,8 +23,9 @@ import {
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Plus, Check, ShoppingCart } from "lucide-react"
+import type { ColumnConfig } from "@/components/column-settings-panel"
 
 const levelColors: Record<AllLevels, string> = {
   "Rayon": "bg-blue-100 text-blue-800",
@@ -43,10 +44,13 @@ interface RequesterTranslationTableProps {
   translatedNames?: Map<string, string>
   translatedDescriptions?: Map<string, string>
   searchQuery?: string
-  onAddToBasket: (item: UnifiedItem, proposedNameFr: string, proposedDescriptionFr: string) => void
+  onAddToBasket?: (item: UnifiedItem, proposedNameFr: string, proposedDescriptionFr: string) => void
+  onRemoveFromBasket?: (itemId: string) => void
   onBulkAddToBasket?: () => void
-  isItemInBasket: (itemId: string) => boolean
+  isItemInBasket?: (itemId: string) => boolean
   modifiedItemsCount?: number
+  columnConfig?: ColumnConfig[]
+  itemsPerPage?: number
 }
 
 export function RequesterTranslationTable({ 
@@ -58,12 +62,16 @@ export function RequesterTranslationTable({
   translatedDescriptions, 
   searchQuery = "",
   onAddToBasket,
+  onRemoveFromBasket,
   onBulkAddToBasket,
   isItemInBasket,
-  modifiedItemsCount = 0
+  modifiedItemsCount = 0,
+  columnConfig = [],
+  itemsPerPage = 50
 }: RequesterTranslationTableProps) {
   const [editingCell, setEditingCell] = useState<{ id: string; field: 'nameFr' | 'descriptionFr' } | null>(null)
   const [editedValues, setEditedValues] = useState<Map<string, { nameFr?: string; descriptionFr?: string }>>(new Map())
+  const [displayedRows, setDisplayedRows] = useState(itemsPerPage)
   
   const handleCellClick = (id: string, field: 'nameFr' | 'descriptionFr') => {
     setEditingCell({ id, field })
@@ -99,6 +107,8 @@ export function RequesterTranslationTable({
   }
 
   const handleAddToBasket = (item: ProductItem | Characteristic | CharacteristicValue, type: AllLevels) => {
+    if (!onAddToBasket) return
+    
     const nameFr = getDisplayValue(item, 'nameFr') || ''
     const descriptionFr = getDisplayValue(item, 'descriptionFr') || ''
     
@@ -252,48 +262,85 @@ export function RequesterTranslationTable({
     })
   }
 
+  const showBasketColumn = !!onAddToBasket
+  
+  // Determine which columns to show based on columnConfig
+  const enabledColumns = useMemo(() => {
+    if (columnConfig.length === 0) {
+      return []
+    }
+    return columnConfig
+      .filter(col => col.enabled)
+      .sort((a, b) => a.order - b.order)
+  }, [columnConfig])
+
+  // Paginate the data
+  const paginatedData = useMemo(() => {
+    return finalData.slice(0, displayedRows)
+  }, [finalData, displayedRows])
+
+  const hasMoreRows = displayedRows < finalData.length
+
+  const loadMoreRows = () => {
+    setDisplayedRows(prev => prev + itemsPerPage)
+  }
+
   return (
-    <div className="bg-card rounded-lg border border-border overflow-hidden">
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-muted/50">
-            <TableHead className="font-semibold text-foreground w-32">Type</TableHead>
-            <TableHead className="font-semibold text-foreground w-24">ID</TableHead>
-            <TableHead className="font-semibold text-foreground">Name FR</TableHead>
-            <TableHead className="font-semibold text-foreground">Name EN</TableHead>
-            <TableHead className="font-semibold text-foreground">Description FR</TableHead>
-            <TableHead className="font-semibold text-foreground">Description EN</TableHead>
-            <TableHead className="font-semibold text-foreground w-32 text-center sticky right-0 bg-muted/50 shadow-[-2px_0_4px_rgba(0,0,0,0.1)]">
-              <div className="flex flex-col items-center gap-1">
-                <span className="text-xs">Panier</span>
-                {modifiedItemsCount > 0 && onBulkAddToBasket && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={onBulkAddToBasket}
-                    className="h-6 px-2 text-xs bg-green-600 text-white border-green-600 hover:bg-green-700 hover:text-white"
-                  >
-                    <Plus className="w-3 h-3 mr-1" />
-                    Tout ({modifiedItemsCount})
-                  </Button>
-                )}
-              </div>
-            </TableHead>
+    <>
+      <div className="bg-card rounded-lg border border-border overflow-hidden">
+        <div className="overflow-x-scroll overflow-y-auto max-h-[600px] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-muted [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 [&::-webkit-scrollbar-thumb]:rounded-full">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50">
+                <TableHead className="font-semibold text-foreground w-32">Type</TableHead>
+                <TableHead className="font-semibold text-foreground w-24">ID</TableHead>
+                <TableHead className="font-semibold text-foreground">Name FR</TableHead>
+                <TableHead className="font-semibold text-foreground">Name EN</TableHead>
+                {enabledColumns.map(col => {
+                  if (col.id.includes('name')) {
+                    return <TableHead key={col.id} className="font-semibold text-foreground">{col.label}</TableHead>
+                  }
+                  return null
+                })}
+                <TableHead className="font-semibold text-foreground">Description FR</TableHead>
+                <TableHead className="font-semibold text-foreground">Description EN</TableHead>
+                {enabledColumns.map(col => {
+                  if (col.id.includes('description')) {
+                    return <TableHead key={col.id} className="font-semibold text-foreground">{col.label}</TableHead>
+                  }
+                  return null
+                })}
+            {showBasketColumn && (
+              <TableHead className="font-semibold text-foreground w-32 text-center sticky right-0 bg-muted/50 shadow-[-2px_0_4px_rgba(0,0,0,0.1)]">
+                <div className="flex flex-col items-center gap-1.5">
+                  <span className="text-xs font-semibold">Panier</span>
+                  {modifiedItemsCount > 0 && onBulkAddToBasket && (
+                    <button
+                      onClick={onBulkAddToBasket}
+                      className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                    >
+                      <Plus className="w-3 h-3" />
+                      Ajouter tout ({modifiedItemsCount})
+                    </button>
+                  )}
+                </div>
+              </TableHead>
+            )}
           </TableRow>
         </TableHeader>
         <TableBody>
-          {finalData.length === 0 ? (
+          {paginatedData.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={6 + enabledColumns.length + (showBasketColumn ? 1 : 0)} className="text-center py-8 text-muted-foreground">
                 Aucun element ne correspond aux filtres selectionnes
               </TableCell>
             </TableRow>
           ) : (
-            finalData.map(({ item, type, indent, count }, index) => {
+            paginatedData.map(({ item, type, indent, count }, index) => {
               const hasMissingTranslation = !item.nameFr || !item.descriptionFr
               const isShared = count && count > 1
               const hasEdits = editedValues.has(item.id) || translatedNames?.has(item.id) || translatedDescriptions?.has(item.id)
-              const inBasket = isItemInBasket(item.id)
+              const inBasket = isItemInBasket ? isItemInBasket(item.id) : false
               
               return (
                 <TableRow 
@@ -346,6 +393,18 @@ export function RequesterTranslationTable({
                     )}
                   </TableCell>
                   <TableCell>{item.nameEn}</TableCell>
+                  {enabledColumns.map(col => {
+                    if (col.id.includes('name')) {
+                      const lang = col.id.replace('name-', '')
+                      const fieldKey = `name${lang.charAt(0).toUpperCase()}${lang.slice(1)}` as keyof typeof item
+                      return (
+                        <TableCell key={col.id} className="text-muted-foreground text-sm">
+                          {(item[fieldKey] as string) || '-'}
+                        </TableCell>
+                      )
+                    }
+                    return null
+                  })}
                   <TableCell 
                     className={cn("max-w-xs text-sm cursor-pointer", !getDisplayValue(item, 'descriptionFr') && "bg-amber-200 text-amber-700 italic")}
                     onClick={() => handleCellClick(item.id, 'descriptionFr')}
@@ -369,37 +428,63 @@ export function RequesterTranslationTable({
                     )}
                   </TableCell>
                   <TableCell className="max-w-xs truncate text-sm">{item.descriptionEn}</TableCell>
-                  <TableCell className={cn(
-                    "text-center sticky right-0 shadow-[-2px_0_4px_rgba(0,0,0,0.08)]",
-                    inBasket && "bg-green-50",
-                    !inBasket && "bg-card"
-                  )}>
-                    {inBasket ? (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled
-                        className="text-green-600"
-                      >
-                        <Check className="w-4 h-4" />
-                      </Button>
-                    ) : hasEdits ? (
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => handleAddToBasket(item, type)}
-                        className="bg-primary text-primary-foreground hover:bg-primary/90"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </Button>
-                    ) : null}
-                  </TableCell>
+                  {enabledColumns.map(col => {
+                    if (col.id.includes('description')) {
+                      const lang = col.id.replace('description-', '')
+                      const fieldKey = `description${lang.charAt(0).toUpperCase()}${lang.slice(1)}` as keyof typeof item
+                      return (
+                        <TableCell key={col.id} className="max-w-xs truncate text-sm text-muted-foreground">
+                          {(item[fieldKey] as string) || '-'}
+                        </TableCell>
+                      )
+                    }
+                    return null
+                  })}
+                  {showBasketColumn && (
+                    <TableCell className={cn(
+                      "text-center sticky right-0 shadow-[-2px_0_4px_rgba(0,0,0,0.08)]",
+                      inBasket && "bg-green-50",
+                      !inBasket && "bg-card"
+                    )}>
+                      {inBasket ? (
+                        <button
+                          onClick={() => onRemoveFromBasket?.(item.id)}
+                          className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 transition-colors"
+                        >
+                          Retirer
+                        </button>
+                      ) : hasEdits ? (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => handleAddToBasket(item, type)}
+                          className="bg-primary text-primary-foreground hover:bg-primary/90"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      ) : null}
+                    </TableCell>
+                  )}
                 </TableRow>
               )
             })
           )}
         </TableBody>
       </Table>
-    </div>
+        </div>
+      </div>
+      
+      {hasMoreRows && (
+        <div className="flex justify-center py-4 border-t border-border bg-muted/30">
+          <Button
+            onClick={loadMoreRows}
+            variant="outline"
+            className="min-w-[200px]"
+          >
+            Charger plus de lignes ({finalData.length - displayedRows} restantes)
+          </Button>
+        </div>
+      )}
+    </>
   )
 }

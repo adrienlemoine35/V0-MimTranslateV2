@@ -7,8 +7,12 @@ export interface ProductItem {
   type: ProductLevel
   nameFr: string
   nameEn: string
+  nameEs?: string
+  nameIt?: string
   descriptionFr: string
   descriptionEn: string
+  descriptionEs?: string
+  descriptionIt?: string
   parentId: string | null
   path: string[] // Breadcrumb path
 }
@@ -20,8 +24,12 @@ export interface Characteristic {
   characteristicType: CharacteristicType // ouvert ou ferme
   nameFr: string
   nameEn: string
+  nameEs?: string
+  nameIt?: string
   descriptionFr: string
   descriptionEn: string
+  descriptionEs?: string
+  descriptionIt?: string
   modelIds: string[] // Many-to-many: liste des modeles associes
 }
 
@@ -31,8 +39,12 @@ export interface CharacteristicValue {
   type: "Valeur"
   nameFr: string
   nameEn: string
+  nameEs?: string
+  nameIt?: string
   descriptionFr: string
   descriptionEn: string
+  descriptionEs?: string
+  descriptionIt?: string
   characteristicIds: string[] // Many-to-many: liste des caracteristiques associees
 }
 
@@ -42,8 +54,12 @@ export interface UnifiedItem {
   type: AllLevels
   nameFr: string
   nameEn: string
+  nameEs?: string
+  nameIt?: string
   descriptionFr: string
   descriptionEn: string
+  descriptionEs?: string
+  descriptionIt?: string
   characteristicType?: CharacteristicType
   linkedIds?: string[] // modelIds pour Caracteristique, characteristicIds pour Valeur
 }
@@ -64,8 +80,12 @@ export const productDatabase: ProductItem[] = [
     type: "Rayon",
     nameFr: "Matériaux de construction",
     nameEn: "Building Materials",
+    nameEs: "Materiales de construcción",
+    nameIt: "Materiali da costruzione",
     descriptionFr: "Tous les matériaux nécessaires à la construction",
     descriptionEn: "All materials needed for construction",
+    descriptionEs: "Todos los materiales necesarios para la construcción",
+    descriptionIt: "Tutti i materiali necessari per la costruzione",
     parentId: null,
     path: ["Matériaux de construction"]
   },
@@ -75,8 +95,12 @@ export const productDatabase: ProductItem[] = [
     type: "Sous-Rayon",
     nameFr: "Matériel de construction",
     nameEn: "Construction Equipment",
+    nameEs: "Material de construcción",
+    nameIt: "Materiale da costruzione",
     descriptionFr: "Équipements et outils pour la construction",
     descriptionEn: "Equipment and tools for construction",
+    descriptionEs: "Equipos y herramientas para la construcción",
+    descriptionIt: "Attrezzature e strumenti per la costruzione",
     parentId: "R001",
     path: ["Matériaux de construction", "Matériel de construction"]
   },
@@ -85,8 +109,12 @@ export const productDatabase: ProductItem[] = [
     type: "Sous-Rayon",
     nameFr: "Gros œuvre",
     nameEn: "Structural Work",
+    nameEs: "Obra gruesa",
+    nameIt: "Opera grezza",
     descriptionFr: "Matériaux pour le gros œuvre",
     descriptionEn: "Materials for structural work",
+    descriptionEs: "Materiales para la obra gruesa",
+    descriptionIt: "Materiali per l'opera grezza",
     parentId: "R001",
     path: ["Matériaux de construction", "Gros œuvre"]
   },
@@ -96,8 +124,12 @@ export const productDatabase: ProductItem[] = [
     type: "Regroupement",
     nameFr: "Bétonnière",
     nameEn: "Concrete Mixer",
+    nameEs: "Hormigonera",
+    nameIt: "Betoniera",
     descriptionFr: "Machines pour mélanger le béton",
     descriptionEn: "Machines for mixing concrete",
+    descriptionEs: "Máquinas para mezclar hormigón",
+    descriptionIt: "Macchine per mescolare il calcestruzzo",
     parentId: "SR001",
     path: ["Matériaux de construction", "Matériel de construction", "Bétonnière"]
   },
@@ -106,8 +138,12 @@ export const productDatabase: ProductItem[] = [
     type: "Regroupement",
     nameFr: "Échafaudage",
     nameEn: "Scaffolding",
+    nameEs: "Andamio",
+    nameIt: "Ponteggio",
     descriptionFr: "Structures temporaires pour travaux en hauteur",
     descriptionEn: "Temporary structures for working at height",
+    descriptionEs: "Estructuras temporales para trabajos en altura",
+    descriptionIt: "Strutture temporanee per lavori in altezza",
     parentId: "SR001",
     path: ["Matériaux de construction", "Matériel de construction", "Échafaudage"]
   },
@@ -116,8 +152,12 @@ export const productDatabase: ProductItem[] = [
     type: "Regroupement",
     nameFr: "Ciment et mortier",
     nameEn: "Cement and Mortar",
+    nameEs: "Cemento y mortero",
+    nameIt: "Cemento e malta",
     descriptionFr: "Liants hydrauliques pour construction",
     descriptionEn: "Hydraulic binders for construction",
+    descriptionEs: "Aglutinantes hidráulicos para construcción",
+    descriptionIt: "Leganti idraulici per costruzione",
     parentId: "SR002",
     path: ["Matériaux de construction", "Gros œuvre", "Ciment et mortier"]
   },
@@ -127,18 +167,54 @@ export const productDatabase: ProductItem[] = [
     type: "Modèle",
     nameFr: "Bétonnière électrique",
     nameEn: "Electric Concrete Mixer",
+    nameEs: "Hormigonera eléctrica",
+    nameIt: "Betoniera elettrica",
     descriptionFr: "Bétonnière alimentée par électricité",
     descriptionEn: "Electrically powered concrete mixer",
+    descriptionEs: "Hormigonera alimentada por electricidad",
+    descriptionIt: "Betoniera alimentata elettricamente",
     parentId: "RG001",
     path: ["Matériaux de construction", "Matériel de construction", "Bétonnière", "Bétonnière électrique"]
   },
   {
     id: "M002",
     type: "Modèle",
+    nameFr: "Bétonnière thermique",
+    nameEn: "Gas-Powered Concrete Mixer",
+    nameEs: "Hormigonera térmica",
+    nameIt: "Betoniera termica",
+    descriptionFr: "Bétonnière avec moteur thermique",
+    descriptionEn: "Gas-powered concrete mixer",
+    descriptionEs: "Hormigonera con motor térmico",
+    descriptionIt: "Betoniera con motore termico",
+    parentId: "RG001",
+    path: ["Matériaux de construction", "Matériel de construction", "Bétonnière", "Bétonnière thermique"]
+  },
+  {
+    id: "M003",
+    type: "Modèle",
+    nameFr: "Échafaudage roulant",
+    nameEn: "Mobile Scaffolding",
+    nameEs: "Andamio móvil",
+    nameIt: "Ponteggio mobile",
+    descriptionFr: "Échafaudage avec roues pour déplacement facile",
+    descriptionEn: "Scaffolding with wheels for easy movement",
+    descriptionEs: "Andamio con ruedas para facilitar el movimiento",
+    descriptionIt: "Ponteggio con ruote per spostamento facile",
+    parentId: "RG002",
+    path: ["Matériaux de construction", "Matériel de construction", "Échafaudage", "Échafaudage roulant"]
+  },
+  {
+    id: "M002",
+    type: "Modèle",
     nameFr: "",
     nameEn: "Thermal Concrete Mixer",
+    nameEs: "",
+    nameIt: "",
     descriptionFr: "",
     descriptionEn: "Thermal engine concrete mixer",
+    descriptionEs: "",
+    descriptionIt: "",
     parentId: "RG001",
     path: ["Matériaux de construction", "Matériel de construction", "Bétonnière", "Bétonnière thermique"]
   },
@@ -147,8 +223,12 @@ export const productDatabase: ProductItem[] = [
     type: "Modèle",
     nameFr: "Échafaudage roulant",
     nameEn: "Rolling Scaffolding",
+    nameEs: "Andamio rodante",
+    nameIt: "Ponteggio rotante",
     descriptionFr: "Échafaudage mobile sur roulettes",
     descriptionEn: "Mobile scaffolding on wheels",
+    descriptionEs: "Andamio móvil sobre ruedas",
+    descriptionIt: "Ponteggio mobile su ruote",
     parentId: "RG002",
     path: ["Matériaux de construction", "Matériel de construction", "Échafaudage", "Échafaudage roulant"]
   },
@@ -157,8 +237,12 @@ export const productDatabase: ProductItem[] = [
     type: "Modèle",
     nameFr: "Ciment Portland",
     nameEn: "Portland Cement",
+    nameEs: "Cemento Portland",
+    nameIt: "Cemento Portland",
     descriptionFr: "Ciment standard pour usage courant",
     descriptionEn: "Standard cement for common use",
+    descriptionEs: "Cemento estándar para uso común",
+    descriptionIt: "Cemento standard per uso comune",
     parentId: "RG003",
     path: ["Matériaux de construction", "Gros œuvre", "Ciment et mortier", "Ciment Portland"]
   },
@@ -170,8 +254,12 @@ export const productDatabase: ProductItem[] = [
     type: "Rayon",
     nameFr: "Jardin - Aménagement extérieur",
     nameEn: "Garden - Outdoor Landscaping",
+    nameEs: "Jardín - Paisajismo exterior",
+    nameIt: "Giardino - Paesaggistica esterna",
     descriptionFr: "Tout pour l'aménagement et l'entretien du jardin",
     descriptionEn: "Everything for garden landscaping and maintenance",
+    descriptionEs: "Todo para el paisajismo y mantenimiento del jardín",
+    descriptionIt: "Tutto per la paesaggistica e la manutenzione del giardino",
     parentId: null,
     path: ["Jardin - Aménagement extérieur"]
   },
@@ -181,8 +269,12 @@ export const productDatabase: ProductItem[] = [
     type: "Sous-Rayon",
     nameFr: "Outillage et entretien du terrain",
     nameEn: "Tools and Land Maintenance",
+    nameEs: "Herramientas y mantenimiento del terreno",
+    nameIt: "Attrezzi e manutenzione del terreno",
     descriptionFr: "Outils pour l'entretien des espaces verts",
     descriptionEn: "Tools for green space maintenance",
+    descriptionEs: "Herramientas para el mantenimiento de espacios verdes",
+    descriptionIt: "Attrezzi per la manutenzione di spazi verdi",
     parentId: "R002",
     path: ["Jardin - Aménagement extérieur", "Outillage et entretien du terrain"]
   },
@@ -191,8 +283,12 @@ export const productDatabase: ProductItem[] = [
     type: "Sous-Rayon",
     nameFr: "Arrosage et récupération d'eau",
     nameEn: "Watering and Water Recovery",
+    nameEs: "Riego y recuperación de agua",
+    nameIt: "Irrigazione e recupero dell'acqua",
     descriptionFr: "Systèmes d'arrosage et récupération d'eau de pluie",
     descriptionEn: "Watering systems and rainwater recovery",
+    descriptionEs: "Sistemas de riego y recuperación de agua de lluvia",
+    descriptionIt: "Sistemi di irrigazione e recupero dell'acqua piovana",
     parentId: "R002",
     path: ["Jardin - Aménagement extérieur", "Arrosage et récupération d'eau"]
   },
@@ -202,8 +298,12 @@ export const productDatabase: ProductItem[] = [
     type: "Regroupement",
     nameFr: "Taille du bois et de la haie",
     nameEn: "Wood and Hedge Trimming",
+    nameEs: "Poda de madera y setos",
+    nameIt: "Potatura del legno e siepi",
     descriptionFr: "Outils pour tailler arbres et haies",
     descriptionEn: "Tools for trimming trees and hedges",
+    descriptionEs: "Herramientas para podar árboles y setos",
+    descriptionIt: "Attrezzi per potare alberi e siepi",
     parentId: "SR003",
     path: ["Jardin - Aménagement extérieur", "Outillage et entretien du terrain", "Taille du bois et de la haie"]
   },
@@ -212,8 +312,12 @@ export const productDatabase: ProductItem[] = [
     type: "Regroupement",
     nameFr: "Coupe du bois",
     nameEn: "Wood Cutting",
+    nameEs: "Corte de madera",
+    nameIt: "Taglio del legno",
     descriptionFr: "Outils pour couper le bois",
     descriptionEn: "Tools for cutting wood",
+    descriptionEs: "Herramientas para cortar madera",
+    descriptionIt: "Attrezzi per tagliare legno",
     parentId: "SR003",
     path: ["Jardin - Aménagement extérieur", "Outillage et entretien du terrain", "Coupe du bois"]
   },
@@ -222,8 +326,12 @@ export const productDatabase: ProductItem[] = [
     type: "Regroupement",
     nameFr: "Tuyaux et raccords",
     nameEn: "Hoses and Fittings",
+    nameEs: "Mangueras y accesorios",
+    nameIt: "Tubi e raccordi",
     descriptionFr: "Tuyaux d'arrosage et accessoires",
     descriptionEn: "Garden hoses and accessories",
+    descriptionEs: "Mangueras de riego y accesorios",
+    descriptionIt: "Tubi per irrigazione e accessori",
     parentId: "SR004",
     path: ["Jardin - Aménagement extérieur", "Arrosage et récupération d'eau", "Tuyaux et raccords"]
   },
@@ -233,8 +341,12 @@ export const productDatabase: ProductItem[] = [
     type: "Modèle",
     nameFr: "Sécateur manuel",
     nameEn: "Manual Pruner",
+    nameEs: "Tijeras de podar manuales",
+    nameIt: "Forbici da potatura manuali",
     descriptionFr: "Sécateur à main pour petites branches",
     descriptionEn: "Hand pruner for small branches",
+    descriptionEs: "Tijeras de mano para ramas pequeñas",
+    descriptionIt: "Forbici a mano per piccoli rami",
     parentId: "RG004",
     path: ["Jardin - Aménagement extérieur", "Outillage et entretien du terrain", "Taille du bois et de la haie", "Sécateur manuel"]
   },
@@ -243,8 +355,12 @@ export const productDatabase: ProductItem[] = [
     type: "Modèle",
     nameFr: "",
     nameEn: "Electric Hedge Trimmer",
+    nameEs: "",
+    nameIt: "",
     descriptionFr: "",
     descriptionEn: "Electrically powered hedge trimmer",
+    descriptionEs: "",
+    descriptionIt: "",
     parentId: "RG004",
     path: ["Jardin - Aménagement extérieur", "Outillage et entretien du terrain", "Taille du bois et de la haie", "Taille-haie électrique"]
   },
@@ -253,8 +369,12 @@ export const productDatabase: ProductItem[] = [
     type: "Modèle",
     nameFr: "Scie arboricole",
     nameEn: "Arborist Saw",
+    nameEs: "Sierra de arboricultura",
+    nameIt: "Sega da arboricoltura",
     descriptionFr: "Scie spécialisée pour élagage des arbres",
     descriptionEn: "Specialized saw for tree pruning",
+    descriptionEs: "Sierra especializada para poda de árboles",
+    descriptionIt: "Sega specializzata per potatura degli alberi",
     parentId: "RG005",
     path: ["Jardin - Aménagement extérieur", "Outillage et entretien du terrain", "Coupe du bois", "Scie arboricole"]
   },
@@ -263,8 +383,12 @@ export const productDatabase: ProductItem[] = [
     type: "Modèle",
     nameFr: "Tronçonneuse thermique",
     nameEn: "Gas Chainsaw",
+    nameEs: "Motosierra térmica",
+    nameIt: "Motosega termica",
     descriptionFr: "Tronçonneuse à moteur essence",
     descriptionEn: "Gasoline-powered chainsaw",
+    descriptionEs: "Motosierra con motor de gasolina",
+    descriptionIt: "Motosega con motore a benzina",
     parentId: "RG005",
     path: ["Jardin - Aménagement extérieur", "Outillage et entretien du terrain", "Coupe du bois", "Tronçonneuse thermique"]
   },
@@ -273,8 +397,12 @@ export const productDatabase: ProductItem[] = [
     type: "Modèle",
     nameFr: "Tuyau extensible",
     nameEn: "Expandable Hose",
+    nameEs: "Manguera extensible",
+    nameIt: "Tubo estensibile",
     descriptionFr: "Tuyau d'arrosage extensible et rétractable",
     descriptionEn: "Expandable and retractable garden hose",
+    descriptionEs: "Manguera de riego extensible y retráctil",
+    descriptionIt: "Tubo per irrigazione estensibile e retrattile",
     parentId: "RG006",
     path: ["Jardin - Aménagement extérieur", "Arrosage et récupération d'eau", "Tuyaux et raccords", "Tuyau extensible"]
   },
@@ -286,8 +414,12 @@ export const productDatabase: ProductItem[] = [
     type: "Rayon",
     nameFr: "Électricité",
     nameEn: "Electrical",
+    nameEs: "Electricidad",
+    nameIt: "Elettricità",
     descriptionFr: "Matériel électrique et domotique",
     descriptionEn: "Electrical equipment and home automation",
+    descriptionEs: "Material eléctrico y domótica",
+    descriptionIt: "Materiale elettrico e domotica",
     parentId: null,
     path: ["Électricité"]
   },
