@@ -334,11 +334,17 @@ export default function RequesterPage() {
       const data = await response.json()
 
       if (!response.ok) {
+        const errorMessage = data.error || "Erreur lors de la traduction"
         setTranslationStatus(prev => ({
           ...prev,
           isLoading: false,
-          error: data.error || "Erreur lors de la traduction"
+          error: errorMessage
         }))
+        toast({
+          title: "Erreur de traduction",
+          description: errorMessage,
+          variant: "destructive"
+        })
         return
       }
 
@@ -368,11 +374,17 @@ export default function RequesterPage() {
       })
 
     } catch (error) {
+      const errorMessage = `Erreur: ${String(error)}`
       setTranslationStatus(prev => ({
         ...prev,
         isLoading: false,
-        error: `Erreur: ${String(error)}`
+        error: errorMessage
       }))
+      toast({
+        title: "Erreur de traduction",
+        description: errorMessage,
+        variant: "destructive"
+      })
     }
   }, [itemsMissingTranslations, toast])
 
