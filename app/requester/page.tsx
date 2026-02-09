@@ -482,19 +482,25 @@ export default function RequesterPage() {
                   </button>
                   <ToggleButton
                     pressed={showMissingOnly}
-                    onPressedChange={setShowMissingOnly}
+                    onPressedChange={(value) => {
+                      setShowMissingOnly(value)
+                      if (value) setShowModifiedOnly(false)
+                    }}
                     variant="amber"
                   >
                     <AlertTriangle className="w-4 h-4" />
-                    Manquantes ({missingTranslationsCount})
+                    Manquantes uniquement ({missingTranslationsCount})
                   </ToggleButton>
                   <ToggleButton
                     pressed={showModifiedOnly}
-                    onPressedChange={setShowModifiedOnly}
+                    onPressedChange={(value) => {
+                      setShowModifiedOnly(value)
+                      if (value) setShowMissingOnly(false)
+                    }}
                     variant="blue"
                   >
                     <Languages className="w-4 h-4" />
-                    Modifiees ({itemsWithModifications.length})
+                    Modifiees uniquement ({itemsWithModifications.length})
                   </ToggleButton>
                   <button
                     onClick={() => setShowFilter(!showFilter)}
