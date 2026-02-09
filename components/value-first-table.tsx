@@ -87,7 +87,8 @@ export function ValueFirstTable({ data, translatedItems = new Map(), translatedN
 
   return (
     <div className="bg-card rounded-lg border border-border overflow-hidden">
-      <Table>
+      <div className="overflow-x-auto overflow-y-auto max-h-[600px]">
+        <Table>
         <TableHeader>
           <TableRow className="bg-muted/50">
             <TableHead className="w-10"></TableHead>
@@ -319,6 +320,7 @@ export function ValueFirstTable({ data, translatedItems = new Map(), translatedN
           )}
         </TableBody>
       </Table>
+      </div>
     </div>
   )
 }

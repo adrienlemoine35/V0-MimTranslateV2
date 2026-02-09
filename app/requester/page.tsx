@@ -24,6 +24,7 @@ import { TypeFilterAccordion } from "@/components/type-filter-accordion"
 import { RequestBasket } from "@/components/request-basket"
 import { RequestHistory } from "@/components/request-history"
 import { ColumnSettingsPanel, type ColumnConfig } from "@/components/column-settings-panel"
+import { ToggleButton } from "@/components/ui/toggle-button"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
 import Link from "next/link"
@@ -479,28 +480,22 @@ export default function RequesterPage() {
                     )}
                     Traduire via DeepL ({missingTranslationsCount})
                   </button>
-                  <button
-                    onClick={() => setShowMissingOnly(!showMissingOnly)}
-                    className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${
-                      showMissingOnly 
-                        ? "bg-amber-500 text-white hover:bg-amber-600" 
-                        : "bg-card border border-border hover:bg-muted"
-                    }`}
+                  <ToggleButton
+                    pressed={showMissingOnly}
+                    onPressedChange={setShowMissingOnly}
+                    variant="amber"
                   >
                     <AlertTriangle className="w-4 h-4" />
                     Manquantes ({missingTranslationsCount})
-                  </button>
-                  <button
-                    onClick={() => setShowModifiedOnly(!showModifiedOnly)}
-                    className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${
-                      showModifiedOnly 
-                        ? "bg-blue-600 text-white hover:bg-blue-700" 
-                        : "bg-card border border-border hover:bg-muted"
-                    }`}
+                  </ToggleButton>
+                  <ToggleButton
+                    pressed={showModifiedOnly}
+                    onPressedChange={setShowModifiedOnly}
+                    variant="blue"
                   >
                     <Languages className="w-4 h-4" />
                     Modifiees ({itemsWithModifications.length})
-                  </button>
+                  </ToggleButton>
                   <button
                     onClick={() => setShowFilter(!showFilter)}
                     className="flex items-center gap-2 px-3 py-2 text-sm bg-card border border-border rounded-lg hover:bg-muted transition-colors"

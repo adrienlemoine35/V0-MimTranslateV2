@@ -286,7 +286,7 @@ export function RequesterTranslationTable({
   return (
     <>
       <div className="bg-card rounded-lg border border-border overflow-hidden">
-        <div className="overflow-auto max-h-[600px]">
+        <div className="overflow-x-auto overflow-y-auto max-h-[600px]">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
