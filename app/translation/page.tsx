@@ -227,21 +227,57 @@ export default function Translation() {
     }
     
     // Apply search filter (keeps hierarchy intact)
+    // Search also includes characteristics and values
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase()
-      data = data.filter(item => 
-        item.nameFr?.toLowerCase().includes(query) ||
-        item.nameEn?.toLowerCase().includes(query) ||
-        item.descriptionFr?.toLowerCase().includes(query) ||
-        item.descriptionEn?.toLowerCase().includes(query)
-      )
+      
+      // Filter product items
+      const matchingProductIds = new Set<string>()
+      data.forEach(item => {
+        if (
+          item.nameFr?.toLowerCase().includes(query) ||
+          item.nameEn?.toLowerCase().includes(query) ||
+          item.descriptionFr?.toLowerCase().includes(query) ||
+          item.descriptionEn?.toLowerCase().includes(query)
+        ) {
+          matchingProductIds.add(item.id)
+        }
+      })
+      
+      // Check if any characteristics or values match
+      allUnifiedItems.forEach(item => {
+        if (item.type === "Caractéristique" || item.type === "Valeur") {
+          if (
+            item.nameFr?.toLowerCase().includes(query) ||
+            item.nameEn?.toLowerCase().includes(query) ||
+            item.descriptionFr?.toLowerCase().includes(query) ||
+            item.descriptionEn?.toLowerCase().includes(query)
+          ) {
+            // If a characteristic/value matches, include its parent model(s)
+            if (item.type === "Caractéristique" && item.modelIds) {
+              item.modelIds.forEach(modelId => matchingProductIds.add(modelId))
+            }
+            if (item.type === "Valeur" && item.characteristicIds) {
+              // Find parent models through characteristics
+              item.characteristicIds.forEach(charId => {
+                const char = allUnifiedItems.find(ui => ui.id === charId && ui.type === "Caractéristique")
+                if (char && char.modelIds) {
+                  char.modelIds.forEach(modelId => matchingProductIds.add(modelId))
+                }
+              })
+            }
+          }
+        }
+      })
+      
+      data = data.filter(item => matchingProductIds.has(item.id))
     }
     
     // DO NOT apply showMissingOnly filter here - it breaks hierarchy
     // The table component will handle highlighting missing translations
     
     return data
-  }, [selectedIds, searchQuery, translationStatus.translatedItems, translationStatus.translatedNames, getAllDescendantsOfSelected])
+  }, [selectedIds, searchQuery, translationStatus.translatedItems, translationStatus.translatedNames, getAllDescendantsOfSelected, allUnifiedItems])
 
   // Filtered data for value-first view
   const filteredValueFirstData = useMemo(() => {
