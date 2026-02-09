@@ -214,6 +214,15 @@ export function TranslationTable({ data, selectedIds, showMissingOnly = false, t
     })
   }
 
+  // Sort: items with missing translations come first
+  finalData = finalData.sort((a, b) => {
+    const aMissing = !a.item.nameFr || !a.item.descriptionFr
+    const bMissing = !b.item.nameFr || !b.item.descriptionFr
+    if (aMissing && !bMissing) return -1
+    if (!aMissing && bMissing) return 1
+    return 0
+  })
+
   return (
     <div className="bg-card rounded-lg border border-border overflow-hidden">
       <Table>

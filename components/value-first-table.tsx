@@ -85,6 +85,15 @@ export function ValueFirstTable({ data, translatedItems = new Map(), translatedN
     return translatedItems.get(id) || original
   }
 
+  // Sort: values with missing translations come first
+  const sortedData = [...data].sort((a, b) => {
+    const aMissing = !a.value.nameFr || !a.value.descriptionFr
+    const bMissing = !b.value.nameFr || !b.value.descriptionFr
+    if (aMissing && !bMissing) return -1
+    if (!aMissing && bMissing) return 1
+    return 0
+  })
+
   return (
     <div className="bg-card rounded-lg border border-border overflow-hidden">
       <Table>
@@ -101,14 +110,14 @@ export function ValueFirstTable({ data, translatedItems = new Map(), translatedN
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.length === 0 ? (
+          {sortedData.length === 0 ? (
             <TableRow>
               <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                 Aucune valeur trouvee
               </TableCell>
             </TableRow>
           ) : (
-            data.map(({ value, characteristics, models }) => {
+            sortedData.map(({ value, characteristics, models }) => {
               const isExpanded = expandedValues.has(value.id)
               const hasMissingTranslation = !value.nameFr || !value.descriptionFr
               const descFr = getTranslatedDescription(value.id, value.descriptionFr)
