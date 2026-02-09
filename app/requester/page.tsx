@@ -18,6 +18,7 @@ import {
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { RequesterTranslationTable } from "@/components/requester-translation-table"
+import { ValueFirstTable } from "@/components/value-first-table"
 import { TypeFilterAccordion } from "@/components/type-filter-accordion"
 import { RequestBasket } from "@/components/request-basket"
 import { RequestHistory } from "@/components/request-history"
@@ -28,6 +29,7 @@ import {
   productDatabase, 
   buildCategoryTree, 
   getAllUnifiedItems,
+  getValueFirstView,
   type ProductItem,
   type UnifiedItem 
 } from "@/lib/product-database"
@@ -44,6 +46,7 @@ import {
 } from "@/lib/validation-store"
 
 type ViewTab = "translate" | "basket" | "history"
+type ViewMode = "hierarchy" | "value-first"
 
 interface TranslationStatus {
   isLoading: boolean
@@ -55,6 +58,7 @@ interface TranslationStatus {
 export default function RequesterPage() {
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState<ViewTab>("translate")
+  const [viewMode, setViewMode] = useState<ViewMode>("hierarchy")
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [showFilter, setShowFilter] = useState(true)
   const [isFilterCollapsed, setIsFilterCollapsed] = useState(false)
@@ -71,6 +75,7 @@ export default function RequesterPage() {
   
   const categoryTree = useMemo(() => buildCategoryTree(), [])
   const allUnifiedItems = useMemo(() => getAllUnifiedItems(), [])
+  const valueFirstData = useMemo(() => getValueFirstView(), [])
   
   // Get current draft request
   const draftRequest = useMemo(() => {
@@ -133,6 +138,28 @@ export default function RequesterPage() {
     
     return data
   }, [selectedIds, translationStatus.translatedItems, translationStatus.translatedNames, getAllDescendantsOfSelected])
+
+  // Filtered data for value-first view
+  const filteredValueFirstData = useMemo(() => {
+    let data = valueFirstData
+    
+    if (showMissingOnly) {
+      data = data.filter(({ value }) => !value.nameFr || !value.descriptionFr)
+    }
+    
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      data = data.filter(({ value }) => 
+        value.nameFr?.toLowerCase().includes(query) ||
+        value.nameEn?.toLowerCase().includes(query) ||
+        value.descriptionFr?.toLowerCase().includes(query) ||
+        value.descriptionEn?.toLowerCase().includes(query) ||
+        value.id?.toLowerCase().includes(query)
+      )
+    }
+    
+    return data
+  }, [valueFirstData, showMissingOnly, searchQuery])
 
   // Items with modifications (translated or edited) - must be defined before handleBulkAddToBasket
   // Count all modified items from the entire database, not just filtered data
@@ -402,8 +429,33 @@ export default function RequesterPage() {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-4">
                   <h2 className="text-lg font-semibold text-foreground">
-                    Catalogue produits ({filteredData.length} elements)
+                    {viewMode === "hierarchy"
+                      ? `Catalogue produits (${filteredData.length} elements)`
+                      : `Vue Value First (${filteredValueFirstData.length} valeurs)`
+                    }
                   </h2>
+                  <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+                    <button
+                      onClick={() => setViewMode("hierarchy")}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                        viewMode === "hierarchy"
+                          ? "bg-card text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      Hierarchie
+                    </button>
+                    <button
+                      onClick={() => setViewMode("value-first")}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                        viewMode === "value-first"
+                          ? "bg-card text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      Value First
+                    </button>
+                  </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <button
@@ -470,7 +522,7 @@ export default function RequesterPage() {
               </div>
 
               <div className="flex gap-4">
-                {showFilter && (
+                {showFilter && viewMode === "hierarchy" && (
                   <TypeFilterAccordion
                     categoryTree={categoryTree}
                     selectedIds={selectedIds}
@@ -481,19 +533,27 @@ export default function RequesterPage() {
                 )}
                 
                 <div className="flex-1 min-w-0 overflow-auto">
-                  <RequesterTranslationTable 
-                    data={filteredData} 
-                    selectedIds={selectedIds} 
-                    showMissingOnly={showMissingOnly}
-                    showModifiedOnly={showModifiedOnly}
-                    translatedNames={translationStatus.translatedNames}
-                    translatedDescriptions={translationStatus.translatedItems}
-                    searchQuery={searchQuery}
-                    onAddToBasket={handleAddToBasket}
-                    onBulkAddToBasket={handleBulkAddToBasket}
-                    isItemInBasket={isItemInDraft}
-                    modifiedItemsCount={itemsWithModifications.length}
-                  />
+                  {viewMode === "hierarchy" ? (
+                    <RequesterTranslationTable 
+                      data={filteredData} 
+                      selectedIds={selectedIds} 
+                      showMissingOnly={showMissingOnly}
+                      showModifiedOnly={showModifiedOnly}
+                      translatedNames={translationStatus.translatedNames}
+                      translatedDescriptions={translationStatus.translatedItems}
+                      searchQuery={searchQuery}
+                      onAddToBasket={handleAddToBasket}
+                      onBulkAddToBasket={handleBulkAddToBasket}
+                      isItemInBasket={isItemInDraft}
+                      modifiedItemsCount={itemsWithModifications.length}
+                    />
+                  ) : (
+                    <ValueFirstTable 
+                      data={filteredValueFirstData}
+                      translatedItems={translationStatus.translatedItems}
+                      translatedNames={translationStatus.translatedNames}
+                    />
+                  )}
                 </div>
               </div>
             </>

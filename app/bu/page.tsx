@@ -20,6 +20,7 @@ import { Header } from "@/components/header"
 import { BURequestList } from "@/components/bu-request-list"
 import { BURequestReview } from "@/components/bu-request-review"
 import { RequesterTranslationTable } from "@/components/requester-translation-table"
+import { ValueFirstTable } from "@/components/value-first-table"
 import { TypeFilterAccordion } from "@/components/type-filter-accordion"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
@@ -37,14 +38,17 @@ import {
 import { 
   productDatabase, 
   buildCategoryTree,
-  getAllUnifiedItems
+  getAllUnifiedItems,
+  getValueFirstView
 } from "@/lib/product-database"
 
 type ViewTab = "pending" | "completed" | "normal"
+type ViewMode = "hierarchy" | "value-first"
 
 export default function BUPage() {
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState<ViewTab>("normal")
+  const [viewMode, setViewMode] = useState<ViewMode>("hierarchy")
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -56,6 +60,7 @@ export default function BUPage() {
   
   const categoryTree = useMemo(() => buildCategoryTree(), [])
   const allUnifiedItems = useMemo(() => getAllUnifiedItems(), [])
+  const valueFirstData = useMemo(() => getValueFirstView(), [])
 
   // Helper to get all descendants of selected IDs
   const getAllDescendantsOfSelected = useCallback(() => {
@@ -90,6 +95,28 @@ export default function BUPage() {
     
     return data
   }, [selectedIds, getAllDescendantsOfSelected])
+  
+  // Filtered data for value-first view
+  const filteredValueFirstData = useMemo(() => {
+    let data = valueFirstData
+    
+    if (showMissingOnly) {
+      data = data.filter(({ value }) => !value.nameFr || !value.descriptionFr)
+    }
+    
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      data = data.filter(({ value }) => 
+        value.nameFr?.toLowerCase().includes(query) ||
+        value.nameEn?.toLowerCase().includes(query) ||
+        value.descriptionFr?.toLowerCase().includes(query) ||
+        value.descriptionEn?.toLowerCase().includes(query) ||
+        value.id?.toLowerCase().includes(query)
+      )
+    }
+    
+    return data
+  }, [valueFirstData, showMissingOnly, searchQuery])
   
   // Items with missing translations
   const itemsMissingTranslations = useMemo(() => {
@@ -242,8 +269,33 @@ export default function BUPage() {
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-4">
                       <h2 className="text-lg font-semibold text-foreground">
-                        Catalogue produits ({filteredData.length} elements)
+                        {viewMode === "hierarchy"
+                          ? `Catalogue produits (${filteredData.length} elements)`
+                          : `Vue Value First (${filteredValueFirstData.length} valeurs)`
+                        }
                       </h2>
+                      <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+                        <button
+                          onClick={() => setViewMode("hierarchy")}
+                          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                            viewMode === "hierarchy"
+                              ? "bg-card text-foreground shadow-sm"
+                              : "text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          Hierarchie
+                        </button>
+                        <button
+                          onClick={() => setViewMode("value-first")}
+                          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                            viewMode === "value-first"
+                              ? "bg-card text-foreground shadow-sm"
+                              : "text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          Value First
+                        </button>
+                      </div>
                     </div>
                     <div className="flex items-center gap-3">
                       <button
@@ -299,7 +351,7 @@ export default function BUPage() {
                   </div>
 
                   <div className="flex gap-4">
-                    {showFilter && (
+                    {showFilter && viewMode === "hierarchy" && (
                       <TypeFilterAccordion
                         categoryTree={categoryTree}
                         selectedIds={selectedIds}
@@ -310,13 +362,19 @@ export default function BUPage() {
                     )}
                     
                     <div className="flex-1 min-w-0 overflow-auto">
-                      <RequesterTranslationTable 
-                        data={filteredData} 
-                        selectedIds={selectedIds}
-                        showMissingOnly={showMissingOnly}
-                        showModifiedOnly={showModifiedOnly}
-                        searchQuery={searchQuery}
-                      />
+                      {viewMode === "hierarchy" ? (
+                        <RequesterTranslationTable 
+                          data={filteredData} 
+                          selectedIds={selectedIds}
+                          showMissingOnly={showMissingOnly}
+                          showModifiedOnly={showModifiedOnly}
+                          searchQuery={searchQuery}
+                        />
+                      ) : (
+                        <ValueFirstTable 
+                          data={filteredValueFirstData}
+                        />
+                      )}
                     </div>
                   </div>
                 </>
