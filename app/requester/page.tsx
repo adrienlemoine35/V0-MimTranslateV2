@@ -13,7 +13,8 @@ import {
   CheckCircle2,
   XCircle,
   ArrowLeft,
-  Trash2
+  Trash2,
+  Settings
 } from "lucide-react"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
@@ -22,6 +23,7 @@ import { ValueFirstTable } from "@/components/value-first-table"
 import { TypeFilterAccordion } from "@/components/type-filter-accordion"
 import { RequestBasket } from "@/components/request-basket"
 import { RequestHistory } from "@/components/request-history"
+import { ColumnSettingsPanel, type ColumnConfig } from "@/components/column-settings-panel"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
 import Link from "next/link"
@@ -66,6 +68,13 @@ export default function RequesterPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [refreshKey, setRefreshKey] = useState(0)
   const [showModifiedOnly, setShowModifiedOnly] = useState(false)
+  const [showColumnSettings, setShowColumnSettings] = useState(false)
+  const [columnConfig, setColumnConfig] = useState<ColumnConfig[]>([
+    { id: 'name-es', label: 'Name ES', enabled: false, order: 0 },
+    { id: 'name-it', label: 'Name IT', enabled: false, order: 1 },
+    { id: 'description-es', label: 'Description ES', enabled: false, order: 2 },
+    { id: 'description-it', label: 'Description IT', enabled: false, order: 3 },
+  ])
   const [translationStatus, setTranslationStatus] = useState<TranslationStatus>({
     isLoading: false,
     error: null,
@@ -499,6 +508,13 @@ export default function RequesterPage() {
                     <Filter className="w-4 h-4" />
                     {showFilter ? "Masquer filtres" : "Afficher filtres"}
                   </button>
+                  <button
+                    onClick={() => setShowColumnSettings(true)}
+                    className="flex items-center gap-2 px-3 py-2 text-sm bg-card border border-border rounded-lg hover:bg-muted transition-colors"
+                  >
+                    <Settings className="w-4 h-4" />
+                    Parametres
+                  </button>
                 </div>
               </div>
 
@@ -546,6 +562,7 @@ export default function RequesterPage() {
                       onBulkAddToBasket={handleBulkAddToBasket}
                       isItemInBasket={isItemInDraft}
                       modifiedItemsCount={itemsWithModifications.length}
+                      columnConfig={columnConfig}
                     />
                   ) : (
                     <ValueFirstTable 
@@ -575,6 +592,12 @@ export default function RequesterPage() {
         </main>
       </div>
       <Toaster />
+      <ColumnSettingsPanel 
+        isOpen={showColumnSettings}
+        onClose={() => setShowColumnSettings(false)}
+        columns={columnConfig}
+        onColumnsChange={setColumnConfig}
+      />
     </div>
   )
 }

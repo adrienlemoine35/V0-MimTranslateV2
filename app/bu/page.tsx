@@ -13,7 +13,8 @@ import {
   AlertTriangle,
   Languages,
   Loader2,
-  Search
+  Search,
+  Settings
 } from "lucide-react"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
@@ -22,6 +23,7 @@ import { BURequestReview } from "@/components/bu-request-review"
 import { RequesterTranslationTable } from "@/components/requester-translation-table"
 import { ValueFirstTable } from "@/components/value-first-table"
 import { TypeFilterAccordion } from "@/components/type-filter-accordion"
+import { ColumnSettingsPanel, type ColumnConfig } from "@/components/column-settings-panel"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
 import Link from "next/link"
@@ -57,6 +59,13 @@ export default function BUPage() {
   const [showMissingOnly, setShowMissingOnly] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [showModifiedOnly, setShowModifiedOnly] = useState(false)
+  const [showColumnSettings, setShowColumnSettings] = useState(false)
+  const [columnConfig, setColumnConfig] = useState<ColumnConfig[]>([
+    { id: 'name-es', label: 'Name ES', enabled: false, order: 0 },
+    { id: 'name-it', label: 'Name IT', enabled: false, order: 1 },
+    { id: 'description-es', label: 'Description ES', enabled: false, order: 2 },
+    { id: 'description-it', label: 'Description IT', enabled: false, order: 3 },
+  ])
   
   const categoryTree = useMemo(() => buildCategoryTree(), [])
   const allUnifiedItems = useMemo(() => getAllUnifiedItems(), [])
@@ -334,6 +343,13 @@ export default function BUPage() {
                         <Filter className="w-4 h-4" />
                         {showFilter ? "Masquer filtres" : "Afficher filtres"}
                       </button>
+                      <button
+                        onClick={() => setShowColumnSettings(true)}
+                        className="flex items-center gap-2 px-3 py-2 text-sm bg-card border border-border rounded-lg hover:bg-muted transition-colors"
+                      >
+                        <Settings className="w-4 h-4" />
+                        Parametres
+                      </button>
                     </div>
                   </div>
 
@@ -369,6 +385,7 @@ export default function BUPage() {
                           showMissingOnly={showMissingOnly}
                           showModifiedOnly={showModifiedOnly}
                           searchQuery={searchQuery}
+                          columnConfig={columnConfig}
                         />
                       ) : (
                         <ValueFirstTable 
@@ -399,6 +416,12 @@ export default function BUPage() {
         </main>
       </div>
       <Toaster />
+      <ColumnSettingsPanel 
+        isOpen={showColumnSettings}
+        onClose={() => setShowColumnSettings(false)}
+        columns={columnConfig}
+        onColumnsChange={setColumnConfig}
+      />
     </div>
   )
 }

@@ -7,8 +7,12 @@ export interface ProductItem {
   type: ProductLevel
   nameFr: string
   nameEn: string
+  nameEs?: string
+  nameIt?: string
   descriptionFr: string
   descriptionEn: string
+  descriptionEs?: string
+  descriptionIt?: string
   parentId: string | null
   path: string[] // Breadcrumb path
 }
@@ -20,8 +24,12 @@ export interface Characteristic {
   characteristicType: CharacteristicType // ouvert ou ferme
   nameFr: string
   nameEn: string
+  nameEs?: string
+  nameIt?: string
   descriptionFr: string
   descriptionEn: string
+  descriptionEs?: string
+  descriptionIt?: string
   modelIds: string[] // Many-to-many: liste des modeles associes
 }
 
@@ -31,8 +39,12 @@ export interface CharacteristicValue {
   type: "Valeur"
   nameFr: string
   nameEn: string
+  nameEs?: string
+  nameIt?: string
   descriptionFr: string
   descriptionEn: string
+  descriptionEs?: string
+  descriptionIt?: string
   characteristicIds: string[] // Many-to-many: liste des caracteristiques associees
 }
 
@@ -42,8 +54,12 @@ export interface UnifiedItem {
   type: AllLevels
   nameFr: string
   nameEn: string
+  nameEs?: string
+  nameIt?: string
   descriptionFr: string
   descriptionEn: string
+  descriptionEs?: string
+  descriptionIt?: string
   characteristicType?: CharacteristicType
   linkedIds?: string[] // modelIds pour Caracteristique, characteristicIds pour Valeur
 }

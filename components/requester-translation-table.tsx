@@ -23,8 +23,9 @@ import {
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Plus, Check, ShoppingCart } from "lucide-react"
+import type { ColumnConfig } from "@/components/column-settings-panel"
 
 const levelColors: Record<AllLevels, string> = {
   "Rayon": "bg-blue-100 text-blue-800",
@@ -47,6 +48,8 @@ interface RequesterTranslationTableProps {
   onBulkAddToBasket?: () => void
   isItemInBasket?: (itemId: string) => boolean
   modifiedItemsCount?: number
+  columnConfig?: ColumnConfig[]
+  itemsPerPage?: number
 }
 
 export function RequesterTranslationTable({ 
@@ -60,10 +63,13 @@ export function RequesterTranslationTable({
   onAddToBasket,
   onBulkAddToBasket,
   isItemInBasket,
-  modifiedItemsCount = 0
+  modifiedItemsCount = 0,
+  columnConfig = [],
+  itemsPerPage = 50
 }: RequesterTranslationTableProps) {
   const [editingCell, setEditingCell] = useState<{ id: string; field: 'nameFr' | 'descriptionFr' } | null>(null)
   const [editedValues, setEditedValues] = useState<Map<string, { nameFr?: string; descriptionFr?: string }>>(new Map())
+  const [displayedRows, setDisplayedRows] = useState(itemsPerPage)
   
   const handleCellClick = (id: string, field: 'nameFr' | 'descriptionFr') => {
     setEditingCell({ id, field })
@@ -255,18 +261,53 @@ export function RequesterTranslationTable({
   }
 
   const showBasketColumn = !!onAddToBasket
+  
+  // Determine which columns to show based on columnConfig
+  const enabledColumns = useMemo(() => {
+    if (columnConfig.length === 0) {
+      return []
+    }
+    return columnConfig
+      .filter(col => col.enabled)
+      .sort((a, b) => a.order - b.order)
+  }, [columnConfig])
+
+  // Paginate the data
+  const paginatedData = useMemo(() => {
+    return finalData.slice(0, displayedRows)
+  }, [finalData, displayedRows])
+
+  const hasMoreRows = displayedRows < finalData.length
+
+  const loadMoreRows = () => {
+    setDisplayedRows(prev => prev + itemsPerPage)
+  }
 
   return (
-    <div className="bg-card rounded-lg border border-border overflow-hidden">
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-muted/50">
-            <TableHead className="font-semibold text-foreground w-32">Type</TableHead>
-            <TableHead className="font-semibold text-foreground w-24">ID</TableHead>
-            <TableHead className="font-semibold text-foreground">Name FR</TableHead>
-            <TableHead className="font-semibold text-foreground">Name EN</TableHead>
-            <TableHead className="font-semibold text-foreground">Description FR</TableHead>
-            <TableHead className="font-semibold text-foreground">Description EN</TableHead>
+    <>
+      <div className="bg-card rounded-lg border border-border overflow-hidden">
+        <div className="overflow-auto max-h-[600px]">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50">
+                <TableHead className="font-semibold text-foreground w-32">Type</TableHead>
+                <TableHead className="font-semibold text-foreground w-24">ID</TableHead>
+                <TableHead className="font-semibold text-foreground">Name FR</TableHead>
+                <TableHead className="font-semibold text-foreground">Name EN</TableHead>
+                {enabledColumns.map(col => {
+                  if (col.id.includes('name')) {
+                    return <TableHead key={col.id} className="font-semibold text-foreground">{col.label}</TableHead>
+                  }
+                  return null
+                })}
+                <TableHead className="font-semibold text-foreground">Description FR</TableHead>
+                <TableHead className="font-semibold text-foreground">Description EN</TableHead>
+                {enabledColumns.map(col => {
+                  if (col.id.includes('description')) {
+                    return <TableHead key={col.id} className="font-semibold text-foreground">{col.label}</TableHead>
+                  }
+                  return null
+                })}
             {showBasketColumn && (
               <TableHead className="font-semibold text-foreground w-32 text-center sticky right-0 bg-muted/50 shadow-[-2px_0_4px_rgba(0,0,0,0.1)]">
                 <div className="flex flex-col items-center gap-1">
@@ -288,14 +329,14 @@ export function RequesterTranslationTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {finalData.length === 0 ? (
+          {paginatedData.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={showBasketColumn ? 7 : 6} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={6 + enabledColumns.length + (showBasketColumn ? 1 : 0)} className="text-center py-8 text-muted-foreground">
                 Aucun element ne correspond aux filtres selectionnes
               </TableCell>
             </TableRow>
           ) : (
-            finalData.map(({ item, type, indent, count }, index) => {
+            paginatedData.map(({ item, type, indent, count }, index) => {
               const hasMissingTranslation = !item.nameFr || !item.descriptionFr
               const isShared = count && count > 1
               const hasEdits = editedValues.has(item.id) || translatedNames?.has(item.id) || translatedDescriptions?.has(item.id)
@@ -352,6 +393,18 @@ export function RequesterTranslationTable({
                     )}
                   </TableCell>
                   <TableCell>{item.nameEn}</TableCell>
+                  {enabledColumns.map(col => {
+                    if (col.id.includes('name')) {
+                      const lang = col.id.replace('name-', '')
+                      const fieldKey = `name${lang.charAt(0).toUpperCase()}${lang.slice(1)}` as keyof typeof item
+                      return (
+                        <TableCell key={col.id} className="text-muted-foreground text-sm">
+                          {(item[fieldKey] as string) || '-'}
+                        </TableCell>
+                      )
+                    }
+                    return null
+                  })}
                   <TableCell 
                     className={cn("max-w-xs text-sm cursor-pointer", !getDisplayValue(item, 'descriptionFr') && "bg-amber-200 text-amber-700 italic")}
                     onClick={() => handleCellClick(item.id, 'descriptionFr')}
@@ -375,6 +428,18 @@ export function RequesterTranslationTable({
                     )}
                   </TableCell>
                   <TableCell className="max-w-xs truncate text-sm">{item.descriptionEn}</TableCell>
+                  {enabledColumns.map(col => {
+                    if (col.id.includes('description')) {
+                      const lang = col.id.replace('description-', '')
+                      const fieldKey = `description${lang.charAt(0).toUpperCase()}${lang.slice(1)}` as keyof typeof item
+                      return (
+                        <TableCell key={col.id} className="max-w-xs truncate text-sm text-muted-foreground">
+                          {(item[fieldKey] as string) || '-'}
+                        </TableCell>
+                      )
+                    }
+                    return null
+                  })}
                   {showBasketColumn && (
                     <TableCell className={cn(
                       "text-center sticky right-0 shadow-[-2px_0_4px_rgba(0,0,0,0.08)]",
@@ -408,6 +473,20 @@ export function RequesterTranslationTable({
           )}
         </TableBody>
       </Table>
-    </div>
+        </div>
+      </div>
+      
+      {hasMoreRows && (
+        <div className="flex justify-center py-4 border-t border-border bg-muted/30">
+          <Button
+            onClick={loadMoreRows}
+            variant="outline"
+            className="min-w-[200px]"
+          >
+            Charger plus de lignes ({finalData.length - displayedRows} restantes)
+          </Button>
+        </div>
+      )}
+    </>
   )
 }
