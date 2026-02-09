@@ -72,6 +72,7 @@ export function RequesterTranslationTable({
   const [editingCell, setEditingCell] = useState<{ id: string; field: 'nameFr' | 'descriptionFr' } | null>(null)
   const [editedValues, setEditedValues] = useState<Map<string, { nameFr?: string; descriptionFr?: string }>>(new Map())
   const [displayedRows, setDisplayedRows] = useState(itemsPerPage)
+  const [validatedItems, setValidatedItems] = useState<Set<string>>(new Set())
   
   const handleCellClick = (id: string, field: 'nameFr' | 'descriptionFr') => {
     setEditingCell({ id, field })
@@ -285,6 +286,31 @@ export function RequesterTranslationTable({
     setDisplayedRows(prev => prev + itemsPerPage)
   }
 
+  // Calculate item status
+  const getItemStatus = (item: ProductItem | Characteristic | CharacteristicValue) => {
+    if (validatedItems.has(item.id)) {
+      return 'validated'
+    }
+    
+    const hasMissingTranslation = !item.nameFr || !item.descriptionFr
+    if (hasMissingTranslation) {
+      return 'missing'
+    }
+    
+    // Check if translated via DeepL (exists in translatedNames or translatedDescriptions)
+    const wasAutoTranslated = translatedNames?.has(item.id) || translatedDescriptions?.has(item.id)
+    if (wasAutoTranslated) {
+      return 'to-verify'
+    }
+    
+    // Has complete translations and wasn't auto-translated
+    return 'validated'
+  }
+
+  const handleValidate = (itemId: string) => {
+    setValidatedItems(prev => new Set(prev).add(itemId))
+  }
+
   return (
     <>
       <div className="bg-card rounded-lg border border-border overflow-hidden">
@@ -310,8 +336,11 @@ export function RequesterTranslationTable({
                   }
                   return null
                 })}
+            <TableHead className="font-semibold text-foreground w-40 text-center sticky right-40 bg-muted/50 shadow-[-2px_0_4px_rgba(0,0,0,0.1)] z-10">
+              Statut
+            </TableHead>
             {showBasketColumn && (
-              <TableHead className="font-semibold text-foreground w-32 text-center sticky right-0 bg-muted/50 shadow-[-2px_0_4px_rgba(0,0,0,0.1)]">
+              <TableHead className="font-semibold text-foreground w-40 text-center sticky right-0 bg-muted/50 shadow-[-2px_0_4px_rgba(0,0,0,0.1)] z-10">
                 <div className="flex flex-col items-center gap-1.5">
                   <span className="text-xs font-semibold">Panier</span>
                   {modifiedItemsCount > 0 && onBulkAddToBasket && (
@@ -331,7 +360,7 @@ export function RequesterTranslationTable({
         <TableBody>
           {paginatedData.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6 + enabledColumns.length + (showBasketColumn ? 1 : 0)} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={7 + enabledColumns.length + (showBasketColumn ? 1 : 0)} className="text-center py-8 text-muted-foreground">
                 Aucun element ne correspond aux filtres selectionnes
               </TableCell>
             </TableRow>
@@ -440,9 +469,41 @@ export function RequesterTranslationTable({
                     }
                     return null
                   })}
+                  <TableCell className="text-center sticky right-40 bg-card shadow-[-2px_0_4px_rgba(0,0,0,0.08)] z-10">
+                    {(() => {
+                      const status = getItemStatus(item)
+                      if (status === 'validated') {
+                        return (
+                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                            Validé
+                          </Badge>
+                        )
+                      }
+                      if (status === 'to-verify') {
+                        return (
+                          <div className="flex items-center gap-2 justify-center">
+                            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                              À vérifier
+                            </Badge>
+                            <button
+                              onClick={() => handleValidate(item.id)}
+                              className="px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10 rounded transition-colors"
+                            >
+                              Valider
+                            </button>
+                          </div>
+                        )
+                      }
+                      return (
+                        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                          Traduction manquante
+                        </Badge>
+                      )
+                    })()}
+                  </TableCell>
                   {showBasketColumn && (
                     <TableCell className={cn(
-                      "text-center sticky right-0 shadow-[-2px_0_4px_rgba(0,0,0,0.08)]",
+                      "text-center sticky right-0 shadow-[-2px_0_4px_rgba(0,0,0,0.08)] z-20",
                       inBasket && "bg-green-50",
                       !inBasket && "bg-card"
                     )}>
