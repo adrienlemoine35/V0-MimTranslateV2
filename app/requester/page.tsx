@@ -122,6 +122,28 @@ export default function RequesterPage() {
     return result
   }, [selectedIds])
   
+  // Store original values before any translation (including characteristics and values)
+  const originalValues = useMemo(() => {
+    const map = new Map<string, { nameFr: string; descriptionFr: string }>()
+    // Add product items
+    productDatabase.forEach(item => {
+      map.set(item.id, {
+        nameFr: item.nameFr || '',
+        descriptionFr: item.descriptionFr || ''
+      })
+    })
+    // Add all characteristics and values from unified items
+    allUnifiedItems.forEach(item => {
+      if (!map.has(item.id)) {
+        map.set(item.id, {
+          nameFr: item.nameFr || '',
+          descriptionFr: item.descriptionFr || ''
+        })
+      }
+    })
+    return map
+  }, [allUnifiedItems])
+
   // Filtered data
   const filteredData = useMemo(() => {
     let data: ProductItem[] = productDatabase.map(item => {
@@ -209,6 +231,7 @@ export default function RequesterPage() {
     itemsWithModifications.forEach(item => {
       const nameFr = translationStatus.translatedNames?.get(item.id) || item.nameFr || ''
       const descriptionFr = translationStatus.translatedItems?.get(item.id) || item.descriptionFr || ''
+      const original = originalValues.get(item.id)
       
       if (nameFr || descriptionFr) {
         addItemToDraft({
@@ -216,8 +239,8 @@ export default function RequesterPage() {
           itemType: item.type,
           nameEn: item.nameEn,
           descriptionEn: item.descriptionEn,
-          originalNameFr: item.nameFr || '',
-          originalDescriptionFr: item.descriptionFr || '',
+          originalNameFr: original?.nameFr || '',
+          originalDescriptionFr: original?.descriptionFr || '',
           proposedNameFr: nameFr,
           proposedDescriptionFr: descriptionFr
         })
@@ -230,17 +253,18 @@ export default function RequesterPage() {
       title: "Elements ajoutes au panier",
       description: `${addedCount} traduction(s) modifiee(s) ont ete ajoutees a votre demande de validation`,
     })
-  }, [itemsWithModifications, translationStatus, toast])
+  }, [itemsWithModifications, translationStatus, toast, originalValues])
 
   // Handle adding translation to basket
   const handleAddToBasket = useCallback((item: UnifiedItem, proposedNameFr: string, proposedDescriptionFr: string) => {
+    const original = originalValues.get(item.id)
     addItemToDraft({
       itemId: item.id,
       itemType: item.type,
       nameEn: item.nameEn,
       descriptionEn: item.descriptionEn,
-      originalNameFr: item.nameFr || '',
-      originalDescriptionFr: item.descriptionFr || '',
+      originalNameFr: original?.nameFr || '',
+      originalDescriptionFr: original?.descriptionFr || '',
       proposedNameFr,
       proposedDescriptionFr
     })
@@ -249,7 +273,7 @@ export default function RequesterPage() {
       title: "Traduction ajoutee au panier",
       description: `"${item.nameEn}" a ete ajoute a votre demande de validation`,
     })
-  }, [toast])
+  }, [toast, originalValues])
 
   // Handle removing item from basket
   const handleRemoveFromBasket = useCallback((itemId: string) => {
