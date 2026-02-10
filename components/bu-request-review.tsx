@@ -228,33 +228,40 @@ export function BURequestReview({
                       </span>
                     </TableCell>
 
-                    {/* ID */}
-                    <TableCell className="text-muted-foreground font-mono text-xs">
-                      {item.itemId}
+                    {/* ID + EN Reference */}
+                    <TableCell>
+                      <div className="space-y-1">
+                        <div className="text-muted-foreground font-mono text-xs">{item.itemId}</div>
+                        <div className="text-xs text-muted-foreground/70 italic">
+                          <div className="truncate max-w-[120px]" title={item.nameEn}>EN: {item.nameEn}</div>
+                        </div>
+                      </div>
                     </TableCell>
 
-                    {/* AVANT (Original) */}
-                    <TableCell className="border-r-2 border-border">
-                      <div className="space-y-2">
-                        <div className="text-sm">
-                          <div className="text-xs text-muted-foreground mb-0.5">Name EN</div>
-                          <div className="font-medium">{item.nameEn}</div>
+                    {/* AVANT (Original FR) */}
+                    <TableCell className="border-r-2 border-border bg-red-50/30">
+                      <div className="space-y-3">
+                        <div>
+                          <div className="text-xs font-medium text-muted-foreground mb-1">Name FR</div>
+                          <div className="text-sm">
+                            {item.originalNameFr || <span className="italic text-muted-foreground">Vide</span>}
+                          </div>
                         </div>
-                        <div className="text-sm">
-                          <div className="text-xs text-muted-foreground mb-0.5">Description EN</div>
-                          <div className="text-muted-foreground text-xs max-w-xs">
-                            {item.descriptionEn}
+                        <div>
+                          <div className="text-xs font-medium text-muted-foreground mb-1">Description FR</div>
+                          <div className="text-xs text-muted-foreground max-w-xs">
+                            {item.originalDescriptionFr || <span className="italic">Vide</span>}
                           </div>
                         </div>
                       </div>
                     </TableCell>
 
                     {/* APRÈS (Proposition + Final) */}
-                    <TableCell>
+                    <TableCell className="bg-green-50/30">
                       {isEditing ? (
                         <div className="space-y-3">
                           <div>
-                            <label className="text-xs text-muted-foreground mb-1 block">Name FR</label>
+                            <label className="text-xs font-medium text-muted-foreground mb-1 block">Name FR</label>
                             <input
                               type="text"
                               value={editValues.nameFr}
@@ -264,7 +271,7 @@ export function BURequestReview({
                             />
                           </div>
                           <div>
-                            <label className="text-xs text-muted-foreground mb-1 block">Description FR</label>
+                            <label className="text-xs font-medium text-muted-foreground mb-1 block">Description FR</label>
                             <textarea
                               value={editValues.descriptionFr}
                               onChange={(e) => setEditValues(v => ({ ...v, descriptionFr: e.target.value }))}
@@ -275,35 +282,34 @@ export function BURequestReview({
                           </div>
                         </div>
                       ) : (
-                        <div className="space-y-2">
-                          <div className="text-sm">
-                            <div className="text-xs text-muted-foreground mb-0.5">Proposition</div>
-                            <div className="text-blue-600 font-medium">
-                              {item.proposedNameFr || <span className="italic text-muted-foreground">-</span>}
+                        <div className="space-y-3">
+                          {/* Name FR */}
+                          <div>
+                            <div className="text-xs font-medium text-muted-foreground mb-1">Name FR</div>
+                            <div className="text-sm font-medium text-blue-700">
+                              {item.proposedNameFr || <span className="italic text-muted-foreground">Non modifié</span>}
                             </div>
-                          </div>
-                          {item.finalNameFr && item.finalNameFr !== item.proposedNameFr && (
-                            <div className="text-sm border-l-2 border-green-500 pl-2">
-                              <div className="text-xs text-green-700 mb-0.5">Final (modifié)</div>
-                              <div className="text-green-700 font-medium">
-                                {item.finalNameFr}
+                            {item.finalNameFr && item.finalNameFr !== item.proposedNameFr && (
+                              <div className="mt-1 text-sm border-l-2 border-green-600 pl-2 bg-green-50 py-1">
+                                <div className="text-xs text-green-700 font-medium">→ Corrigé par BU:</div>
+                                <div className="text-green-800 font-medium">{item.finalNameFr}</div>
                               </div>
-                            </div>
-                          )}
-                          <div className="text-sm">
-                            <div className="text-xs text-muted-foreground mb-0.5">Description</div>
-                            <div className="text-blue-600 text-xs max-w-xs">
-                              {item.proposedDescriptionFr || <span className="italic text-muted-foreground">-</span>}
-                            </div>
+                            )}
                           </div>
-                          {item.finalDescriptionFr && item.finalDescriptionFr !== item.proposedDescriptionFr && (
-                            <div className="text-sm border-l-2 border-green-500 pl-2">
-                              <div className="text-xs text-green-700 mb-0.5">Final (modifié)</div>
-                              <div className="text-green-700 text-xs max-w-xs">
-                                {item.finalDescriptionFr}
-                              </div>
+
+                          {/* Description FR */}
+                          <div>
+                            <div className="text-xs font-medium text-muted-foreground mb-1">Description FR</div>
+                            <div className="text-xs text-blue-700 max-w-xs">
+                              {item.proposedDescriptionFr || <span className="italic text-muted-foreground">Non modifié</span>}
                             </div>
-                          )}
+                            {item.finalDescriptionFr && item.finalDescriptionFr !== item.proposedDescriptionFr && (
+                              <div className="mt-1 text-xs border-l-2 border-green-600 pl-2 bg-green-50 py-1">
+                                <div className="text-xs text-green-700 font-medium">→ Corrigé par BU:</div>
+                                <div className="text-green-800">{item.finalDescriptionFr}</div>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
                     </TableCell>
