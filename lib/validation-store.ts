@@ -17,6 +17,9 @@ export interface TranslationItem {
   finalNameFr?: string
   finalDescriptionFr?: string
   status: ItemStatus
+  // Context for Values (parent characteristic and model)
+  contextCharacteristic?: string
+  contextModel?: string
 }
 
 export interface ValidationRequest {
