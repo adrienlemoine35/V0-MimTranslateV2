@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useCallback } from "react"
+import { useState, useMemo, useCallback, useEffect } from "react"
 import { 
   ArrowLeft,
   Clock,
@@ -84,10 +84,16 @@ export default function BUPage() {
     error: null,
   })
   const [pendingSubTab, setPendingSubTab] = useState<"requests" | "validations">("requests")
+  const [isClient, setIsClient] = useState(false)
   
   const categoryTree = useMemo(() => buildCategoryTree(), [])
   const allUnifiedItems = useMemo(() => getAllUnifiedItems(), [])
   const valueFirstData = useMemo(() => getValueFirstView(), [])
+
+  // Ensure client-side only rendering for localStorage-dependent data
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   // Helper to get all descendants of selected IDs
   const getAllDescendantsOfSelected = useCallback(() => {
@@ -154,21 +160,23 @@ export default function BUPage() {
 
   const missingTranslationsCount = itemsMissingTranslations.length
 
-  // Get requests
+  // Get requests (only on client to avoid hydration mismatch)
   const pendingRequests = useMemo(() => {
+    if (!isClient) return []
     void refreshKey
     return getPendingRequestsForBU()
-  }, [refreshKey])
+  }, [refreshKey, isClient])
 
   const completedRequests = useMemo(() => {
+    if (!isClient) return []
     void refreshKey
     return getCompletedRequests()
-  }, [refreshKey])
+  }, [refreshKey, isClient])
 
   const selectedRequest = useMemo(() => {
-    if (!selectedRequestId) return null
+    if (!isClient || !selectedRequestId) return null
     return getRequestById(selectedRequestId) || null
-  }, [selectedRequestId, refreshKey])
+  }, [selectedRequestId, refreshKey, isClient])
 
   // Handle selecting a request to review
   const handleSelectRequest = useCallback((requestId: string) => {
