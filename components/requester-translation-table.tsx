@@ -27,7 +27,7 @@ import { useState, useMemo } from "react"
 import { Plus, Check, ShoppingCart, CheckCircle2 } from "lucide-react"
 import type { ColumnConfig } from "@/components/column-settings-panel"
 
-const levelColors: Record<AllLevels, string> = {
+export const levelColors: Record<AllLevels, string> = {
   "Rayon": "bg-blue-100 text-blue-800",
   "Sous-Rayon": "bg-green-100 text-green-800",
   "Regroupement": "bg-amber-100 text-amber-800",

@@ -20,7 +20,7 @@ import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { BURequestList } from "@/components/bu-request-list"
 import { BURequestReview } from "@/components/bu-request-review"
-import { RequesterTranslationTable } from "@/components/requester-translation-table"
+import { RequesterTranslationTable, levelColors } from "@/components/requester-translation-table"
 import { ValueFirstTable } from "@/components/value-first-table"
 import { TypeFilterAccordion } from "@/components/type-filter-accordion"
 import { ColumnSettingsPanel, type ColumnConfig } from "@/components/column-settings-panel"
@@ -612,7 +612,7 @@ export default function BUPage() {
                                   {toVerifyItems.map(item => (
                                     <tr key={item.id} className="hover:bg-muted/30">
                                       <td className="px-4 py-3">
-                                        <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">
+                                        <span className={cn("text-xs px-2 py-1 rounded font-medium whitespace-nowrap", levelColors[item.type as keyof typeof levelColors])}>
                                           {item.type}
                                         </span>
                                       </td>
