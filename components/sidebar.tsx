@@ -38,6 +38,8 @@ export function Sidebar() {
             alt="User avatar"
             width={40}
             height={40}
+            loading="eager"
+            priority
             className="w-full h-full object-cover"
           />
         </div>
