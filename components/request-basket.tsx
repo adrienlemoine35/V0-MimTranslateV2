@@ -79,7 +79,7 @@ export function RequestBasket({
               <TableHead className="font-semibold text-foreground">Traduction FR proposee</TableHead>
               <TableHead className="font-semibold text-foreground">Description EN</TableHead>
               <TableHead className="font-semibold text-foreground">Traduction FR proposee</TableHead>
-              <TableHead className="font-semibold text-foreground w-20"></TableHead>
+              <TableHead className="font-semibold text-foreground text-center w-[100px]">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -109,15 +109,14 @@ export function RequestBasket({
                     <span className="text-muted-foreground italic">Non modifie</span>
                   )}
                 </TableCell>
-                <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="sm"
+                <TableCell className="text-center">
+                  <button
                     onClick={() => onRemoveItem(item.itemId)}
-                    className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                    className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                    title="Retirer du panier"
                   >
                     <Trash2 className="w-4 h-4" />
-                  </Button>
+                  </button>
                 </TableCell>
               </TableRow>
             ))}
