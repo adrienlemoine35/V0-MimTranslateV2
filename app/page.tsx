@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
@@ -19,11 +19,18 @@ export default function ModelInformationManagement() {
   const [activeTab, setActiveTab] = useState("Value")
   const [selectedCard, setSelectedCard] = useState(0)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [isClient, setIsClient] = useState(false)
 
   const tabs = ["Dashboard", "Model", "Characteristic", "Value"]
 
-  // Get counts for badges
+  // Ensure client-side only rendering for localStorage-dependent data
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
+  // Get counts for badges (only on client to avoid hydration mismatch)
   const pendingForBU = useMemo(() => {
+    if (!isClient) return 0
     void refreshKey
     try {
       return getPendingRequestsForBU().length
@@ -31,9 +38,10 @@ export default function ModelInformationManagement() {
       console.error("[v0] Error getting pending requests:", error)
       return 0
     }
-  }, [refreshKey])
+  }, [refreshKey, isClient])
 
   const completedForRequester = useMemo(() => {
+    if (!isClient) return 0
     void refreshKey
     try {
       return getCompletedRequests().filter(r => !r.buComment?.includes('[seen]')).length
@@ -41,9 +49,10 @@ export default function ModelInformationManagement() {
       console.error("[v0] Error getting completed requests:", error)
       return 0
     }
-  }, [refreshKey])
+  }, [refreshKey, isClient])
 
   const draftItemCount = useMemo(() => {
+    if (!isClient) return 0
     void refreshKey
     try {
       return getDraftItemCount()
@@ -51,7 +60,7 @@ export default function ModelInformationManagement() {
       console.error("[v0] Error getting draft item count:", error)
       return 0
     }
-  }, [refreshKey])
+  }, [refreshKey, isClient])
 
   const actionCards = [
     {
