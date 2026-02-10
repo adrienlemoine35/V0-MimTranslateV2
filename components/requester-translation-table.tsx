@@ -577,14 +577,13 @@ export function RequesterTranslationTable({
       </div>
       
       {hasMoreRows && (
-        <div className="flex justify-center py-4 border-t border-border bg-muted/30">
-          <Button
+        <div className="flex justify-center py-4 border-t border-border">
+          <button
             onClick={loadMoreRows}
-            variant="outline"
-            className="min-w-[200px]"
+            className="px-4 py-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
           >
             Charger plus de lignes ({finalData.length - displayedRows} restantes)
-          </Button>
+          </button>
         </div>
       )}
     </>
