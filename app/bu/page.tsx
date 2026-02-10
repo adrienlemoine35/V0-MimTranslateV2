@@ -27,6 +27,7 @@ import { ColumnSettingsPanel, type ColumnConfig } from "@/components/column-sett
 import { ToggleButton } from "@/components/ui/toggle-button"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
+import { cn } from "@/lib/utils"
 import Link from "next/link"
 import {
   getPendingRequestsForBU,
@@ -67,6 +68,22 @@ export default function BUPage() {
     { id: 'description-es', label: 'Description ES', enabled: false, order: 2 },
     { id: 'description-it', label: 'Description IT', enabled: false, order: 3 },
   ])
+  
+  // Status tracking for BU
+  const [deeplTranslatedIds, setDeeplTranslatedIds] = useState<Set<string>>(new Set())
+  const [validatedIds, setValidatedIds] = useState<Set<string>>(new Set())
+  const [translationStatus, setTranslationStatus] = useState<{
+    isLoading: boolean
+    translatedNames: Map<string, string>
+    translatedItems: Map<string, string>
+    error: string | null
+  }>({
+    isLoading: false,
+    translatedNames: new Map(),
+    translatedItems: new Map(),
+    error: null,
+  })
+  const [pendingSubTab, setPendingSubTab] = useState<"requests" | "validations">("requests")
   
   const categoryTree = useMemo(() => buildCategoryTree(), [])
   const allUnifiedItems = useMemo(() => getAllUnifiedItems(), [])
@@ -201,6 +218,107 @@ export default function BUPage() {
     }
   }, [selectedRequestId, toast])
 
+  // DeepL translation for BU
+  const handleAutoTranslate = useCallback(async () => {
+    setTranslationStatus(prev => ({ ...prev, isLoading: true, error: null }))
+    
+    try {
+      const textsToTranslate = itemsMissingTranslations.flatMap(item => {
+        const texts: { id: string; text: string; field: 'name' | 'description' }[] = []
+        if (!item.nameFr && item.nameEn) {
+          texts.push({ id: item.id, text: item.nameEn, field: 'name' })
+        }
+        if (!item.descriptionFr && item.descriptionEn) {
+          texts.push({ id: item.id, text: item.descriptionEn, field: 'description' })
+        }
+        return texts
+      })
+
+      if (textsToTranslate.length === 0) {
+        setTranslationStatus(prev => ({ ...prev, isLoading: false }))
+        return
+      }
+
+      const response = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          texts: textsToTranslate.map(t => t.text),
+          targetLang: 'FR',
+          sourceLang: 'EN',
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        const errorMessage = data.error || "Erreur lors de la traduction"
+        setTranslationStatus(prev => ({ ...prev, isLoading: false, error: errorMessage }))
+        toast({ title: "Erreur de traduction", description: errorMessage, variant: "destructive" })
+        return
+      }
+
+      const translations = data.translations as string[]
+      const newTranslatedNames = new Map(translationStatus.translatedNames)
+      const newTranslatedItems = new Map(translationStatus.translatedItems)
+      const newDeeplIds = new Set(deeplTranslatedIds)
+
+      textsToTranslate.forEach((item, index) => {
+        if (item.field === 'name') {
+          newTranslatedNames.set(item.id, translations[index])
+        } else {
+          newTranslatedItems.set(item.id, translations[index])
+        }
+        newDeeplIds.add(item.id)
+      })
+
+      setTranslationStatus({
+        isLoading: false,
+        translatedNames: newTranslatedNames,
+        translatedItems: newTranslatedItems,
+        error: null,
+      })
+      setDeeplTranslatedIds(newDeeplIds)
+
+      toast({
+        title: "Traduction terminee",
+        description: `${translations.length} texte(s) traduit(s) via DeepL`,
+      })
+    } catch (error) {
+      const errorMessage = `Erreur: ${String(error)}`
+      setTranslationStatus(prev => ({ ...prev, isLoading: false, error: errorMessage }))
+      toast({ title: "Erreur de traduction", description: errorMessage, variant: "destructive" })
+    }
+  }, [itemsMissingTranslations, translationStatus.translatedNames, translationStatus.translatedItems, deeplTranslatedIds, toast])
+
+  // Validate a single item
+  const handleValidateItem = useCallback((itemId: string) => {
+    setValidatedIds(prev => new Set(prev).add(itemId))
+  }, [])
+
+  // Compute to-verify items
+  const toVerifyItems = useMemo(() => {
+    return allUnifiedItems.filter(item => {
+      if (!item.nameFr && !translationStatus.translatedNames.has(item.id)) return false
+      if (!item.descriptionFr && !translationStatus.translatedItems.has(item.id)) return false
+      if (validatedIds.has(item.id)) return false
+      return deeplTranslatedIds.has(item.id)
+    })
+  }, [allUnifiedItems, deeplTranslatedIds, validatedIds, translationStatus])
+
+  // Bulk validate all "to-verify" items
+  const handleBulkValidate = useCallback(() => {
+    setValidatedIds(prev => {
+      const next = new Set(prev)
+      toVerifyItems.forEach(item => next.add(item.id))
+      return next
+    })
+    toast({
+      title: "Validation en lot",
+      description: `${toVerifyItems.length} traduction(s) validee(s)`,
+    })
+  }, [toVerifyItems, toast])
+
   return (
     <div className="flex h-screen bg-background">
       <Sidebar />
@@ -250,9 +368,9 @@ export default function BUPage() {
                 >
                   <Inbox className="w-4 h-4" />
                   A traiter
-                  {pendingRequests.length > 0 && (
+                  {(pendingRequests.length + toVerifyItems.length) > 0 && (
                     <span className="bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full">
-                      {pendingRequests.length}
+                      {pendingRequests.length + toVerifyItems.length}
                     </span>
                   )}
                 </button>
@@ -309,10 +427,20 @@ export default function BUPage() {
                     </div>
                     <div className="flex items-center gap-3">
                       <button
-                        disabled
-                        className="flex items-center gap-2 px-3 py-2 text-sm bg-primary text-primary-foreground rounded-lg opacity-50 cursor-not-allowed"
+                        onClick={handleAutoTranslate}
+                        disabled={missingTranslationsCount === 0 || translationStatus.isLoading}
+                        className={cn(
+                          "flex items-center gap-2 px-3 py-2 text-sm bg-primary text-primary-foreground rounded-lg transition-colors",
+                          (missingTranslationsCount === 0 || translationStatus.isLoading) 
+                            ? "opacity-50 cursor-not-allowed" 
+                            : "hover:bg-primary/90"
+                        )}
                       >
-                        <Languages className="w-4 h-4" />
+                        {translationStatus.isLoading ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Languages className="w-4 h-4" />
+                        )}
                         Traduire via DeepL ({missingTranslationsCount})
                       </button>
                       <ToggleButton
@@ -387,6 +515,14 @@ export default function BUPage() {
                           showModifiedOnly={showModifiedOnly}
                           searchQuery={searchQuery}
                           columnConfig={columnConfig}
+                          translatedNames={translationStatus.translatedNames}
+                          translatedDescriptions={translationStatus.translatedItems}
+                          showStatusColumn={true}
+                          deeplTranslatedIds={deeplTranslatedIds}
+                          validatedIds={validatedIds}
+                          onValidateItem={handleValidateItem}
+                          onBulkValidate={handleBulkValidate}
+                          toVerifyCount={toVerifyItems.length}
                         />
                       ) : (
                         <ValueFirstTable 
@@ -397,12 +533,126 @@ export default function BUPage() {
                   </div>
                 </>
               ) : activeTab === "pending" ? (
-                <BURequestList 
-                  requests={pendingRequests}
-                  onSelectRequest={handleSelectRequest}
-                  emptyMessage="Aucune demande en attente de validation"
-                  emptyDescription="Les demandes soumises par les Requesters apparaitront ici"
-                />
+                <>
+                  {/* Sub-tabs */}
+                  <div className="flex items-center gap-1 bg-muted rounded-lg p-1 mb-4 w-fit">
+                    <button
+                      onClick={() => setPendingSubTab("requests")}
+                      className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                        pendingSubTab === "requests"
+                          ? "bg-card text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      Demandes Requester
+                      {pendingRequests.length > 0 && (
+                        <span className="bg-amber-500 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+                          {pendingRequests.length}
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setPendingSubTab("validations")}
+                      className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                        pendingSubTab === "validations"
+                          ? "bg-card text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Traductions a valider
+                      {toVerifyItems.length > 0 && (
+                        <span className="bg-blue-600 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+                          {toVerifyItems.length}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+
+                  {pendingSubTab === "requests" ? (
+                    <BURequestList 
+                      requests={pendingRequests}
+                      onSelectRequest={handleSelectRequest}
+                      emptyMessage="Aucune demande en attente de validation"
+                      emptyDescription="Les demandes soumises par les Requesters apparaitront ici"
+                    />
+                  ) : (
+                    /* Validations list */
+                    <div className="space-y-4">
+                      {toVerifyItems.length > 0 ? (
+                        <>
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm text-muted-foreground">
+                              {toVerifyItems.length} traduction(s) generee(s) par DeepL en attente de validation humaine.
+                            </p>
+                            <button
+                              onClick={handleBulkValidate}
+                              className="flex items-center gap-2 px-3 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                            >
+                              <CheckCircle2 className="w-4 h-4" />
+                              Tout valider ({toVerifyItems.length})
+                            </button>
+                          </div>
+                          <div className="bg-card rounded-lg border border-border overflow-hidden">
+                            <div className="overflow-x-scroll overflow-y-auto max-h-[500px] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-muted [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 [&::-webkit-scrollbar-thumb]:rounded-full">
+                              <table className="w-full text-sm">
+                                <thead className="bg-muted/50 sticky top-0 z-10">
+                                  <tr>
+                                    <th className="text-left px-4 py-3 font-semibold text-foreground">Type</th>
+                                    <th className="text-left px-4 py-3 font-semibold text-foreground">ID</th>
+                                    <th className="text-left px-4 py-3 font-semibold text-foreground">Name EN</th>
+                                    <th className="text-left px-4 py-3 font-semibold text-foreground">Name FR (DeepL)</th>
+                                    <th className="text-left px-4 py-3 font-semibold text-foreground">Description EN</th>
+                                    <th className="text-left px-4 py-3 font-semibold text-foreground">Description FR (DeepL)</th>
+                                    <th className="text-center px-4 py-3 font-semibold text-foreground sticky right-0 bg-muted/50 shadow-[-2px_0_4px_rgba(0,0,0,0.1)]">Action</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-border">
+                                  {toVerifyItems.map(item => (
+                                    <tr key={item.id} className="hover:bg-muted/30">
+                                      <td className="px-4 py-3">
+                                        <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">
+                                          {item.type}
+                                        </span>
+                                      </td>
+                                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{item.id}</td>
+                                      <td className="px-4 py-3">{item.nameEn || '-'}</td>
+                                      <td className="px-4 py-3 text-blue-700 font-medium">
+                                        {translationStatus.translatedNames.get(item.id) || item.nameFr || '-'}
+                                      </td>
+                                      <td className="px-4 py-3 max-w-xs truncate">{item.descriptionEn || '-'}</td>
+                                      <td className="px-4 py-3 max-w-xs truncate text-blue-700 font-medium">
+                                        {translationStatus.translatedItems.get(item.id) || item.descriptionFr || '-'}
+                                      </td>
+                                      <td className="px-4 py-3 text-center sticky right-0 bg-card shadow-[-2px_0_4px_rgba(0,0,0,0.08)]">
+                                        <button
+                                          onClick={() => handleValidateItem(item.id)}
+                                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors mx-auto"
+                                        >
+                                          <CheckCircle2 className="w-3.5 h-3.5" />
+                                          Valider
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-16 text-center">
+                          <CheckCircle2 className="w-12 h-12 text-muted-foreground/30 mb-4" />
+                          <h3 className="text-lg font-semibold text-foreground mb-1">Aucune traduction a valider</h3>
+                          <p className="text-sm text-muted-foreground max-w-md">
+                            Les traductions generees par DeepL apparaitront ici pour validation manuelle.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
               ) : (
                 <BURequestList 
                   requests={completedRequests}
