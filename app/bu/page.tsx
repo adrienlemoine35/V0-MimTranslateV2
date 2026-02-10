@@ -179,22 +179,23 @@ export default function BUPage() {
     finalDescriptionFr: string, 
     status: ItemStatus
   ) => {
-    if (!selectedRequestId) return
-    updateItemByBU(selectedRequestId, itemId, finalNameFr, finalDescriptionFr, status)
-    setRefreshKey(k => k + 1)
-  }, [selectedRequestId])
-
-  // Handle completing the request
-  const handleCompleteRequest = useCallback((comment?: string) => {
-    if (!selectedRequestId) return
+    // Find which request contains this item
+    const allRequests = [...getPendingRequestsForBU(), ...getCompletedRequests()]
+    const request = allRequests.find(r => r.items.some(item => item.id === itemId))
+    if (!request) return
     
-    const completed = completeRequest(selectedRequestId, comment)
+    updateItemByBU(request.id, itemId, finalNameFr, finalDescriptionFr, status)
+    setRefreshKey(k => k + 1)
+  }, [])
+
+  // Handle completing the request - now needs requestId passed in
+  const handleCompleteRequest = useCallback((requestId: string, comment?: string) => {
+    const completed = completeRequest(requestId, comment)
     if (completed) {
       toast({
         title: "Demande finalisee",
         description: "La demande a ete traitee et le Requester a ete notifie",
       })
-      setSelectedRequestId(null)
       setRefreshKey(k => k + 1)
     } else {
       toast({
@@ -203,7 +204,7 @@ export default function BUPage() {
         variant: "destructive"
       })
     }
-  }, [selectedRequestId, toast])
+  }, [toast])
 
   // DeepL translation for BU
   const handleAutoTranslate = useCallback(async () => {

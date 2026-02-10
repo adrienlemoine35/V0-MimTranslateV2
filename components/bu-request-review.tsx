@@ -46,7 +46,7 @@ interface BURequestReviewProps {
   request: ValidationRequest
   onBack?: () => void
   onUpdateItem: (itemId: string, finalNameFr: string, finalDescriptionFr: string, status: ItemStatus) => void
-  onCompleteRequest: (comment?: string) => void
+  onCompleteRequest: (requestId: string, comment?: string) => void
 }
 
 export function BURequestReview({ 
@@ -137,7 +137,7 @@ export function BURequestReview({
             <span className="font-medium">{processedCount}/{request.items.length}</span>
           </div>
           <Button 
-            onClick={() => onCompleteRequest(comment)}
+            onClick={() => onCompleteRequest(request.id, comment)}
             disabled={!allProcessed}
             className="flex items-center gap-2"
           >
