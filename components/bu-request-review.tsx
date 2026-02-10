@@ -19,7 +19,10 @@ import {
   Edit3, 
   CheckCircle2,
   AlertCircle,
-  Send
+  Send,
+  ChevronDown,
+  ChevronRight,
+  ArrowRight
 } from "lucide-react"
 import type { ValidationRequest, TranslationItem, ItemStatus } from "@/lib/validation-store"
 
@@ -55,6 +58,7 @@ export function BURequestReview({
   const [editingItem, setEditingItem] = useState<string | null>(null)
   const [editValues, setEditValues] = useState<{ nameFr: string; descriptionFr: string }>({ nameFr: '', descriptionFr: '' })
   const [comment, setComment] = useState(request.buComment || '')
+  const [expandedValues, setExpandedValues] = useState<Set<string>>(new Set())
 
   // Count items by status
   const pendingCount = request.items.filter(i => i.status === 'pending').length
@@ -155,7 +159,241 @@ export function BURequestReview({
         </div>
       )}
 
-      {/* Comment section */}
+      {/* Items table */}
+      <div className="bg-card rounded-lg border border-border overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/50">
+              <TableHead className="font-semibold text-foreground w-12"></TableHead>
+              <TableHead className="font-semibold text-foreground w-24">Type</TableHead>
+              <TableHead className="font-semibold text-foreground w-24">ID</TableHead>
+              <TableHead className="font-semibold text-foreground" colSpan={2}>
+                <div className="flex items-center justify-center gap-2 text-center">
+                  <span className="flex-1 text-right">AVANT</span>
+                  <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                  <span className="flex-1 text-left">APRÈS</span>
+                </div>
+              </TableHead>
+              <TableHead className="font-semibold text-foreground w-28 text-center">Statut</TableHead>
+              <TableHead className="font-semibold text-foreground w-32 text-center">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {request.items.map((item) => {
+              const statusInfo = itemStatusConfig[item.status]
+              const isEditing = editingItem === item.id
+              const isValue = item.itemType === "Valeur"
+              const isExpanded = expandedValues.has(item.id)
+
+              return (
+                <>
+                  <TableRow 
+                    key={item.id} 
+                    className={cn(
+                      "hover:bg-muted/30",
+                      item.status === 'pending' && "bg-amber-50/50",
+                      item.status === 'approved' && "bg-green-50/50",
+                      item.status === 'modified' && "bg-blue-50/50",
+                      item.status === 'rejected' && "bg-red-50/50"
+                    )}
+                  >
+                    {/* Chevron for Values */}
+                    <TableCell className="px-2">
+                      {isValue && (
+                        <button
+                          onClick={() => {
+                            const newExpanded = new Set(expandedValues)
+                            if (isExpanded) {
+                              newExpanded.delete(item.id)
+                            } else {
+                              newExpanded.add(item.id)
+                            }
+                            setExpandedValues(newExpanded)
+                          }}
+                          className="p-1 hover:bg-muted rounded transition-colors"
+                        >
+                          {isExpanded ? (
+                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                          )}
+                        </button>
+                      )}
+                    </TableCell>
+
+                    {/* Type */}
+                    <TableCell>
+                      <span className={cn("text-xs px-2 py-1 rounded font-medium whitespace-nowrap", levelColors[item.itemType] || "bg-gray-100 text-gray-800")}>
+                        {item.itemType}
+                      </span>
+                    </TableCell>
+
+                    {/* ID */}
+                    <TableCell className="text-muted-foreground font-mono text-xs">
+                      {item.itemId}
+                    </TableCell>
+
+                    {/* AVANT (Original) */}
+                    <TableCell className="border-r-2 border-border">
+                      <div className="space-y-2">
+                        <div className="text-sm">
+                          <div className="text-xs text-muted-foreground mb-0.5">Name EN</div>
+                          <div className="font-medium">{item.nameEn}</div>
+                        </div>
+                        <div className="text-sm">
+                          <div className="text-xs text-muted-foreground mb-0.5">Description EN</div>
+                          <div className="text-muted-foreground text-xs max-w-xs">
+                            {item.descriptionEn}
+                          </div>
+                        </div>
+                      </div>
+                    </TableCell>
+
+                    {/* APRÈS (Proposition + Final) */}
+                    <TableCell>
+                      {isEditing ? (
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-xs text-muted-foreground mb-1 block">Name FR</label>
+                            <input
+                              type="text"
+                              value={editValues.nameFr}
+                              onChange={(e) => setEditValues(v => ({ ...v, nameFr: e.target.value }))}
+                              className="w-full px-2 py-1.5 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-primary"
+                              placeholder="Nom FR"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-muted-foreground mb-1 block">Description FR</label>
+                            <textarea
+                              value={editValues.descriptionFr}
+                              onChange={(e) => setEditValues(v => ({ ...v, descriptionFr: e.target.value }))}
+                              className="w-full px-2 py-1.5 text-xs border border-border rounded focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                              placeholder="Description FR"
+                              rows={2}
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="text-sm">
+                            <div className="text-xs text-muted-foreground mb-0.5">Proposition</div>
+                            <div className="text-blue-600 font-medium">
+                              {item.proposedNameFr || <span className="italic text-muted-foreground">-</span>}
+                            </div>
+                          </div>
+                          {item.finalNameFr && item.finalNameFr !== item.proposedNameFr && (
+                            <div className="text-sm border-l-2 border-green-500 pl-2">
+                              <div className="text-xs text-green-700 mb-0.5">Final (modifié)</div>
+                              <div className="text-green-700 font-medium">
+                                {item.finalNameFr}
+                              </div>
+                            </div>
+                          )}
+                          <div className="text-sm">
+                            <div className="text-xs text-muted-foreground mb-0.5">Description</div>
+                            <div className="text-blue-600 text-xs max-w-xs">
+                              {item.proposedDescriptionFr || <span className="italic text-muted-foreground">-</span>}
+                            </div>
+                          </div>
+                          {item.finalDescriptionFr && item.finalDescriptionFr !== item.proposedDescriptionFr && (
+                            <div className="text-sm border-l-2 border-green-500 pl-2">
+                              <div className="text-xs text-green-700 mb-0.5">Final (modifié)</div>
+                              <div className="text-green-700 text-xs max-w-xs">
+                                {item.finalDescriptionFr}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </TableCell>
+
+                    {/* Status */}
+                    <TableCell className="text-center">
+                      <Badge className={cn("text-xs", statusInfo.className)}>
+                        {statusInfo.label}
+                      </Badge>
+                    </TableCell>
+
+                    {/* Actions */}
+                    <TableCell className="text-center">
+                      {isEditing ? (
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => handleSaveEdit(item)}
+                            className="p-1.5 text-green-600 hover:bg-green-50 rounded transition-colors"
+                            title="Sauvegarder"
+                          >
+                            <Check className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={handleCancelEdit}
+                            className="p-1.5 text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                            title="Annuler"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : item.status === 'pending' ? (
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => handleApprove(item)}
+                            className="p-1.5 text-green-600 hover:bg-green-50 rounded transition-colors"
+                            title="Approuver"
+                          >
+                            <Check className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleStartEdit(item)}
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                            title="Modifier"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleReject(item)}
+                            className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                            title="Refuser"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleStartEdit(item)}
+                          className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                          title="Modifier"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+
+                  {/* Expanded context for Values */}
+                  {isValue && isExpanded && (
+                    <TableRow className="bg-purple-50/30">
+                      <TableCell colSpan={7} className="py-3">
+                        <div className="pl-8 space-y-2">
+                          <div className="text-xs font-semibold text-purple-700 mb-2">Contexte de la valeur</div>
+                          <div className="text-sm text-muted-foreground">
+                            <span className="font-medium">Caractéristique:</span> {item.contextCharacteristic || 'Non spécifié'}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            <span className="font-medium">Modèle:</span> {item.contextModel || 'Non spécifié'}
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </>
+              )
+            })}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Comment section - moved below table */}
       <div className="bg-card rounded-lg border border-border p-4">
         <label className="block text-sm font-medium text-foreground mb-2">
           Commentaire global (optionnel)
@@ -165,176 +403,11 @@ export function BURequestReview({
           onChange={(e) => setComment(e.target.value)}
           placeholder="Ajouter un commentaire pour le Requester..."
           className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-          rows={2}
+          rows={3}
         />
-      </div>
-
-      {/* Items table */}
-      <div className="bg-card rounded-lg border border-border overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead className="font-semibold text-foreground w-28">Type</TableHead>
-              <TableHead className="font-semibold text-foreground w-20">ID</TableHead>
-              <TableHead className="font-semibold text-foreground">Original EN</TableHead>
-              <TableHead className="font-semibold text-foreground">Proposition FR</TableHead>
-              <TableHead className="font-semibold text-foreground">Final FR</TableHead>
-              <TableHead className="font-semibold text-foreground w-28">Statut</TableHead>
-              <TableHead className="font-semibold text-foreground w-36 text-center">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {request.items.map((item) => {
-              const statusInfo = itemStatusConfig[item.status]
-              const isEditing = editingItem === item.id
-
-              return (
-                <TableRow 
-                  key={item.id} 
-                  className={cn(
-                    "hover:bg-muted/30",
-                    item.status === 'pending' && "bg-amber-50/50",
-                    item.status === 'approved' && "bg-green-50/50",
-                    item.status === 'modified' && "bg-blue-50/50",
-                    item.status === 'rejected' && "bg-red-50/50"
-                  )}
-                >
-                  <TableCell>
-                    <span className={cn("text-xs px-2 py-1 rounded font-medium whitespace-nowrap", levelColors[item.itemType] || "bg-gray-100 text-gray-800")}>
-                      {item.itemType}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground font-mono text-xs">
-                    {item.itemId}
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-1 text-sm">
-                      <div><span className="text-muted-foreground">Nom:</span> {item.nameEn}</div>
-                      <div className="text-muted-foreground text-xs truncate max-w-[200px]">
-                        <span>Desc:</span> {item.descriptionEn}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-1 text-sm">
-                      <div>{item.proposedNameFr || <span className="italic text-muted-foreground">-</span>}</div>
-                      <div className="text-muted-foreground text-xs truncate max-w-[200px]">
-                        {item.proposedDescriptionFr || <span className="italic">-</span>}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {isEditing ? (
-                      <div className="space-y-2">
-                        <input
-                          type="text"
-                          value={editValues.nameFr}
-                          onChange={(e) => setEditValues(v => ({ ...v, nameFr: e.target.value }))}
-                          className="w-full px-2 py-1 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-primary"
-                          placeholder="Nom FR"
-                        />
-                        <textarea
-                          value={editValues.descriptionFr}
-                          onChange={(e) => setEditValues(v => ({ ...v, descriptionFr: e.target.value }))}
-                          className="w-full px-2 py-1 text-xs border border-border rounded focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-                          placeholder="Description FR"
-                          rows={2}
-                        />
-                      </div>
-                    ) : (
-                      <div className="space-y-1 text-sm">
-                        {item.finalNameFr ? (
-                          <>
-                            <div className={item.finalNameFr !== item.proposedNameFr ? "text-blue-600 font-medium" : ""}>
-                              {item.finalNameFr}
-                            </div>
-                            <div className={cn(
-                              "text-xs truncate max-w-[200px]",
-                              item.finalDescriptionFr !== item.proposedDescriptionFr ? "text-blue-600" : "text-muted-foreground"
-                            )}>
-                              {item.finalDescriptionFr}
-                            </div>
-                          </>
-                        ) : (
-                          <span className="text-muted-foreground italic">-</span>
-                        )}
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={cn("text-xs", statusInfo.className)}>
-                      {statusInfo.label}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {isEditing ? (
-                      <div className="flex items-center justify-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleSaveEdit(item)}
-                          className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                        >
-                          <Check className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleCancelEdit}
-                          className="text-gray-600 hover:text-gray-700 hover:bg-gray-100"
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ) : item.status === 'pending' ? (
-                      <div className="flex items-center justify-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleApprove(item)}
-                          className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                          title="Approuver"
-                        >
-                          <Check className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleStartEdit(item)}
-                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                          title="Modifier"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleReject(item)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          title="Refuser"
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleStartEdit(item)}
-                          className="text-muted-foreground hover:text-foreground"
-                          title="Modifier"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    )}
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
+        <p className="text-xs text-muted-foreground mt-2">
+          Ce commentaire sera visible par le Requester dans l'historique de sa demande.
+        </p>
       </div>
 
       {/* Legend */}

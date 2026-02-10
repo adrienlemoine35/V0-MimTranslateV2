@@ -25,20 +25,22 @@ export function ToggleButton({
   }
 
   return (
-    <button
-      onClick={() => onPressedChange(!pressed)}
+    <label
       className={cn(
-        "flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg transition-colors bg-card border border-border hover:bg-muted",
+        "flex items-center gap-3 text-sm cursor-pointer",
         className
       )}
-      aria-pressed={pressed}
     >
       {children}
       
       {/* Toggle Switch */}
-      <div 
+      <button
+        type="button"
+        role="switch"
+        onClick={() => onPressedChange(!pressed)}
+        aria-checked={pressed}
         className={cn(
-          "relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200",
+          "relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary",
           pressed ? variantColors[variant] : "bg-gray-300"
         )}
       >
@@ -48,7 +50,7 @@ export function ToggleButton({
             pressed ? "translate-x-6" : "translate-x-0.5"
           )}
         />
-      </div>
-    </button>
+      </button>
+    </label>
   )
 }

@@ -7,13 +7,13 @@ export async function POST(request: NextRequest) {
     const apiKey = process.env.DEEPL_API_KEY
 
     if (!apiKey) {
-      return NextResponse.json(
-        { 
-          error: "DEEPL_API_KEY non configurée", 
-          message: "Veuillez configurer la variable d'environnement DEEPL_API_KEY" 
-        },
-        { status: 500 }
-      )
+      // Mode mock : simuler les traductions quand la cle API n'est pas configuree
+      console.log("[v0] DEEPL_API_KEY not set, using mock translations for", texts.length, "texts")
+      const mockTranslations = (texts as string[]).map((text: string) => {
+        // Prefixer avec [FR] pour indiquer que c'est une traduction simulee
+        return `[FR] ${text}`
+      })
+      return NextResponse.json({ translations: mockTranslations })
     }
 
     // Determine if using free or pro API based on key suffix
