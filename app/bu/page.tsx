@@ -92,22 +92,6 @@ export default function BUPage() {
     setIsClient(true)
   }, [])
 
-  // Auto-start reviewing pending requests when displayed in "À traiter"
-  useEffect(() => {
-    if (!isClient || activeTab !== "pending" || pendingSubTab !== "requests") return
-    
-    pendingRequests.forEach(request => {
-      if (request.status === 'pending') {
-        const { startReviewingRequest } = require('@/lib/validation-store')
-        startReviewingRequest(request.id)
-      }
-    })
-    
-    if (pendingRequests.length > 0) {
-      setRefreshKey(k => k + 1)
-    }
-  }, [isClient, activeTab, pendingSubTab, pendingRequests.length])
-
   // Helper to get all descendants of selected IDs
   const getAllDescendantsOfSelected = useCallback(() => {
     if (selectedIds.size === 0) return new Set<string>()
