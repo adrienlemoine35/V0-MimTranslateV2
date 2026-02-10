@@ -18,7 +18,6 @@ import {
 } from "lucide-react"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
-import { BURequestList } from "@/components/bu-request-list"
 import { BURequestReview } from "@/components/bu-request-review"
 import { RequesterTranslationTable, levelColors } from "@/components/requester-translation-table"
 import { ValueFirstTable } from "@/components/value-first-table"
@@ -33,7 +32,6 @@ import {
   getPendingRequestsForBU,
   getCompletedRequests,
   getRequestById,
-  startReviewingRequest,
   updateItemByBU,
   completeRequest,
   type ValidationRequest,
@@ -53,7 +51,6 @@ export default function BUPage() {
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState<ViewTab>("normal")
   const [viewMode, setViewMode] = useState<ViewMode>("hierarchy")
-  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [showFilter, setShowFilter] = useState(true)
@@ -94,6 +91,22 @@ export default function BUPage() {
   useEffect(() => {
     setIsClient(true)
   }, [])
+
+  // Auto-start reviewing pending requests when displayed in "À traiter"
+  useEffect(() => {
+    if (!isClient || activeTab !== "pending" || pendingSubTab !== "requests") return
+    
+    pendingRequests.forEach(request => {
+      if (request.status === 'pending') {
+        const { startReviewingRequest } = require('@/lib/validation-store')
+        startReviewingRequest(request.id)
+      }
+    })
+    
+    if (pendingRequests.length > 0) {
+      setRefreshKey(k => k + 1)
+    }
+  }, [isClient, activeTab, pendingSubTab, pendingRequests.length])
 
   // Helper to get all descendants of selected IDs
   const getAllDescendantsOfSelected = useCallback(() => {
@@ -173,25 +186,7 @@ export default function BUPage() {
     return getCompletedRequests()
   }, [refreshKey, isClient])
 
-  const selectedRequest = useMemo(() => {
-    if (!isClient || !selectedRequestId) return null
-    return getRequestById(selectedRequestId) || null
-  }, [selectedRequestId, refreshKey, isClient])
 
-  // Handle selecting a request to review
-  const handleSelectRequest = useCallback((requestId: string) => {
-    const request = getRequestById(requestId)
-    if (request && request.status === 'pending') {
-      startReviewingRequest(requestId)
-    }
-    setSelectedRequestId(requestId)
-    setRefreshKey(k => k + 1)
-  }, [])
-
-  // Handle going back to list
-  const handleBackToList = useCallback(() => {
-    setSelectedRequestId(null)
-  }, [])
 
   // Handle updating an item
   const handleUpdateItem = useCallback((
@@ -342,18 +337,7 @@ export default function BUPage() {
             Retour a l'accueil
           </Link>
 
-          {selectedRequest ? (
-            // Review mode
-            <BURequestReview 
-              request={selectedRequest}
-              onBack={handleBackToList}
-              onUpdateItem={handleUpdateItem}
-              onCompleteRequest={handleCompleteRequest}
-            />
-          ) : (
-            // List mode
-            <>
-              {/* Tab navigation */}
+          {/* Tab navigation */}
               <div className="flex items-center gap-1 bg-muted rounded-lg p-1 mb-6 w-fit">
                 <button
                   onClick={() => setActiveTab("normal")}
@@ -579,12 +563,35 @@ export default function BUPage() {
                   </div>
 
                   {pendingSubTab === "requests" ? (
-                    <BURequestList 
-                      requests={pendingRequests}
-                      onSelectRequest={handleSelectRequest}
-                      emptyMessage="Aucune demande en attente de validation"
-                      emptyDescription="Les demandes soumises par les Requesters apparaitront ici"
-                    />
+                    pendingRequests.length > 0 ? (
+                      <div className="space-y-8">
+                        {pendingRequests.map(request => {
+                          // Get fresh request data on each render to ensure updates are shown
+                          const freshRequest = getRequestById(request.id)
+                          if (!freshRequest) return null
+                          
+                          return (
+                            <div key={request.id} className="bg-card rounded-lg border border-border p-6">
+                              <BURequestReview 
+                                request={freshRequest}
+                                onUpdateItem={handleUpdateItem}
+                                onCompleteRequest={handleCompleteRequest}
+                              />
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-16 text-center">
+                        <Inbox className="w-16 h-16 text-muted-foreground/50 mb-4" />
+                        <h3 className="text-lg font-semibold text-foreground mb-2">
+                          Aucune demande en attente de validation
+                        </h3>
+                        <p className="text-muted-foreground max-w-md">
+                          Les demandes soumises par les Requesters apparaitront ici
+                        </p>
+                      </div>
+                    )
                   ) : (
                     /* Validations list */
                     <div className="space-y-4">
@@ -662,16 +669,35 @@ export default function BUPage() {
                   )}
                 </>
               ) : (
-                <BURequestList 
-                  requests={completedRequests}
-                  onSelectRequest={handleSelectRequest}
-                  emptyMessage="Aucune demande traitee"
-                  emptyDescription="Les demandes que vous avez validees apparaitront ici"
-                  showStats
-                />
+                completedRequests.length > 0 ? (
+                  <div className="space-y-8">
+                    {completedRequests.map(request => {
+                      const freshRequest = getRequestById(request.id)
+                      if (!freshRequest) return null
+                      
+                      return (
+                        <div key={request.id} className="bg-card rounded-lg border border-border p-6">
+                          <BURequestReview 
+                            request={freshRequest}
+                            onUpdateItem={handleUpdateItem}
+                            onCompleteRequest={handleCompleteRequest}
+                          />
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <CheckCircle2 className="w-16 h-16 text-muted-foreground/50 mb-4" />
+                    <h3 className="text-lg font-semibold text-foreground mb-2">
+                      Aucune demande traitee
+                    </h3>
+                    <p className="text-muted-foreground max-w-md">
+                      Les demandes que vous avez validees apparaitront ici
+                    </p>
+                  </div>
+                )
               )}
-            </>
-          )}
         </main>
       </div>
       <Toaster />

@@ -44,7 +44,7 @@ const itemStatusConfig: Record<ItemStatus, { label: string; className: string }>
 
 interface BURequestReviewProps {
   request: ValidationRequest
-  onBack: () => void
+  onBack?: () => void
   onUpdateItem: (itemId: string, finalNameFr: string, finalDescriptionFr: string, status: ItemStatus) => void
   onCompleteRequest: (comment?: string) => void
 }
@@ -115,10 +115,12 @@ export function BURequestReview({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={onBack}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Retour
-          </Button>
+          {onBack && (
+            <Button variant="ghost" size="sm" onClick={onBack}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Retour
+            </Button>
+          )}
           <div>
             <h2 className="text-lg font-semibold text-foreground">
               Demande #{request.id.slice(-6)}
