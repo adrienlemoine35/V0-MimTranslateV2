@@ -6,11 +6,6 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  experimental: {
-    turbo: {
-      root: '/Users/adrien/Downloads/MIM-Translate',
-    },
-  },
 }
 
 export default nextConfig
