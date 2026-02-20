@@ -314,6 +314,13 @@ export default function RequesterPage() {
   // Count missing translations
   const missingTranslationsCount = itemsMissingTranslations.length
 
+  // Count models to translate (models with missing translations)
+  const modelsToTranslateCount = useMemo(() => {
+    return productDatabase.filter(item => 
+      item.type === "Modèle" && (!item.nameFr || !item.descriptionFr)
+    ).length
+  }, [])
+
   // Auto translate via DeepL
   const handleAutoTranslate = useCallback(async () => {
     if (itemsMissingTranslations.length === 0) {
@@ -489,7 +496,7 @@ export default function RequesterPage() {
                           : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
-                      Hierarchie
+                      Modèle ({modelsToTranslateCount})
                     </button>
                     <button
                       onClick={() => setViewMode("value-first")}

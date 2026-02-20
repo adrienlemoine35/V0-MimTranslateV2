@@ -160,6 +160,13 @@ export default function BUPage() {
 
   const missingTranslationsCount = itemsMissingTranslations.length
 
+  // Count models to translate (models with missing translations)
+  const modelsToTranslateCount = useMemo(() => {
+    return productDatabase.filter(item => 
+      item.type === "Modèle" && (!item.nameFr || !item.descriptionFr)
+    ).length
+  }, [])
+
   // Get requests (only on client to avoid hydration mismatch)
   const pendingRequests = useMemo(() => {
     if (!isClient) return []
@@ -419,7 +426,7 @@ export default function BUPage() {
                               : "text-muted-foreground hover:text-foreground"
                           }`}
                         >
-                          Hierarchie
+                          Modèle ({modelsToTranslateCount})
                         </button>
                         <button
                           onClick={() => setViewMode("value-first")}

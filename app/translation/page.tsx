@@ -196,6 +196,13 @@ export default function Translation() {
     return itemsMissingTranslations.length
   }, [itemsMissingTranslations])
 
+  // Count models to translate (models with missing translations)
+  const modelsToTranslateCount = useMemo(() => {
+    return productDatabase.filter(item => 
+      item.type === "Modèle" && (!item.nameFr || !item.descriptionFr)
+    ).length
+  }, [])
+
   const handleAutoTranslate = useCallback(async () => {
     if (itemsMissingTranslations.length === 0) {
       setTranslationStatus(prev => ({
@@ -323,7 +330,7 @@ export default function Translation() {
                   }`}
                 >
                   <LayoutList className="w-4 h-4" />
-                  Hierarchie
+                  Modèle ({modelsToTranslateCount})
                 </button>
                 <button
                   onClick={() => setViewMode("value-first")}
