@@ -14,11 +14,12 @@ import {
   buildCategoryTree, 
   getAllUnifiedItems,
   getValueFirstView,
+  getAllCharacteristics,
   type ProductItem,
   type UnifiedItem 
 } from "@/lib/product-database"
 
-type ViewMode = "hierarchy" | "value-first"
+type ViewMode = "hierarchy" | "value-first" | "characteristic"
 
 interface TranslationStatus {
   isLoading: boolean
@@ -47,6 +48,7 @@ export default function Translation() {
   const categoryTree = useMemo(() => buildCategoryTree(), [])
   const allUnifiedItems = useMemo(() => getAllUnifiedItems(), [])
   const valueFirstData = useMemo(() => getValueFirstView(), [])
+  const characteristicsData = useMemo(() => getAllCharacteristics(), [])
   
   // Helper to get all descendants of selected IDs - MUST BE BEFORE filteredData
   const getAllDescendantsOfSelected = useCallback(() => {
@@ -129,6 +131,33 @@ export default function Translation() {
     
     return data
   }, [valueFirstData, showMissingOnly, searchQuery])
+
+  // Filtered data for characteristic view
+  const filteredCharacteristicData = useMemo(() => {
+    let data = characteristicsData
+    
+    if (showMissingOnly) {
+      data = data.filter(char => !char.nameFr || !char.descriptionFr)
+    }
+    
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      data = data.filter(char => 
+        char.nameFr?.toLowerCase().includes(query) ||
+        char.nameEn?.toLowerCase().includes(query) ||
+        char.descriptionFr?.toLowerCase().includes(query) ||
+        char.descriptionEn?.toLowerCase().includes(query)
+      )
+    }
+    
+    return data
+  }, [characteristicsData, showMissingOnly, searchQuery])
+
+  // Count characteristics missing translations
+  const characteristicsMissingCount = useMemo(() => {
+    return characteristicsData.filter(char => !char.nameFr || !char.descriptionFr).length
+  }, [characteristicsData])
 
   // Get items that would actually be shown in the table (after selection filter)
   const visibleItemsInTable = useMemo(() => {
@@ -309,7 +338,9 @@ export default function Translation() {
               <h2 className="text-lg font-semibold text-foreground">
                 {viewMode === "hierarchy" 
                   ? `Catalogue produits (${filteredData.length} elements)`
-                  : `Vue Value First (${filteredValueFirstData.length} valeurs)`
+                  : viewMode === "value-first"
+                  ? `Vue Value First (${filteredValueFirstData.length} valeurs)`
+                  : `Caractéristiques (${filteredCharacteristicData.length} caractéristiques)`
                 }
               </h2>
               {/* View Mode Toggle */}
@@ -335,6 +366,17 @@ export default function Translation() {
                 >
                   <Layers className="w-4 h-4" />
                   Value First
+                </button>
+                <button
+                  onClick={() => setViewMode("characteristic")}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors ${
+                    viewMode === "characteristic"
+                      ? "bg-card text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Layers className="w-4 h-4" />
+                  Caractéristique ({characteristicsMissingCount})
                 </button>
               </div>
             </div>
@@ -423,12 +465,44 @@ export default function Translation() {
                   translatedDescriptions={translationStatus.translatedItems}
                   searchQuery={searchQuery}
                 />
-              ) : (
+              ) : viewMode === "value-first" ? (
                 <ValueFirstTable 
                   data={filteredValueFirstData} 
                   translatedItems={translationStatus.translatedItems}
                   translatedNames={translationStatus.translatedNames}
                 />
+              ) : (
+                <div className="space-y-2">
+                  {filteredCharacteristicData.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      Aucune caractéristique trouvée
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {filteredCharacteristicData.map((char) => {
+                        const charNameFr = translationStatus.translatedNames?.get(char.id) || char.nameFr
+                        const charDescFr = translationStatus.translatedItems?.get(char.id) || char.descriptionFr
+                        return (
+                          <div key={char.id} className="bg-card border border-border rounded-lg p-4">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <h4 className={cn("font-medium", !charNameFr && "bg-amber-200 text-amber-700 italic")}>
+                                  {charNameFr || "Traduction manquante"}
+                                </h4>
+                                <p className="text-sm text-muted-foreground">{char.nameEn}</p>
+                              </div>
+                              <div>
+                                <p className={cn("text-sm", !charDescFr && "bg-amber-200 text-amber-700 italic")}>
+                                  {charDescFr || "Traduction manquante"}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>
