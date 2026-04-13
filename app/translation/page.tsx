@@ -9,6 +9,7 @@ import { ValueFirstTable } from "@/components/value-first-table"
 import { TypeFilterAccordion } from "@/components/type-filter-accordion"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
+import { cn } from "@/lib/utils"
 import { 
   productDatabase, 
   buildCategoryTree, 
