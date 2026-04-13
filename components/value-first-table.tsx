@@ -14,7 +14,8 @@ import { cn } from "@/lib/utils"
 import { ChevronDown, ChevronRight, Link2 } from "lucide-react"
 import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
-import type { ValueFirstView, Characteristic, ProductItem } from "@/lib/product-database"
+import type { ValueFirstView, Characteristic, ProductItem, CharacteristicValue } from "@/lib/product-database"
+import { ValueUsageDrawer } from "@/components/value-usage-drawer"
 
 interface ValueFirstTableProps {
   data: ValueFirstView[]
@@ -32,6 +33,7 @@ export function ValueFirstTable({ data, translatedItems = new Map(), translatedN
   const [expandedValues, setExpandedValues] = useState<Set<string>>(new Set())
   const [editingCell, setEditingCell] = useState<{ id: string; field: 'nameFr' | 'descriptionFr' } | null>(null)
   const [editedValues, setEditedValues] = useState<Map<string, { nameFr?: string; descriptionFr?: string }>>(new Map())
+  const [drawerValue, setDrawerValue] = useState<CharacteristicValue | null>(null)
 
   const handleCellClick = (id: string, field: 'nameFr' | 'descriptionFr', e: React.MouseEvent) => {
     e.stopPropagation()
@@ -86,6 +88,12 @@ export function ValueFirstTable({ data, translatedItems = new Map(), translatedN
   }
 
   return (
+    <>
+    <ValueUsageDrawer
+      isOpen={drawerValue !== null}
+      onClose={() => setDrawerValue(null)}
+      value={drawerValue}
+    />
     <div className="bg-card rounded-lg border border-border overflow-hidden">
       <div className="overflow-x-scroll overflow-y-auto max-h-[600px] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-muted [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 [&::-webkit-scrollbar-thumb]:rounded-full">
         <Table>
@@ -144,7 +152,14 @@ export function ValueFirstTable({ data, translatedItems = new Map(), translatedN
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="text-muted-foreground font-mono text-sm">{value.id}</TableCell>
+                    <TableCell>
+                      <button
+                        className="font-mono text-sm text-primary underline underline-offset-2 hover:text-primary/80 transition-colors"
+                        onClick={(e) => { e.stopPropagation(); setDrawerValue(value) }}
+                      >
+                        {value.id}
+                      </button>
+                    </TableCell>
                     <TableCell 
                       className={cn("font-medium cursor-pointer", !getDisplayValue(value, 'nameFr') && "bg-amber-200 text-amber-700 italic")}
                       onClick={(e) => handleCellClick(value.id, 'nameFr', e)}
@@ -322,5 +337,6 @@ export function ValueFirstTable({ data, translatedItems = new Map(), translatedN
       </Table>
       </div>
     </div>
+    </>
   )
 }
