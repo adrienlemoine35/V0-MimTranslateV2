@@ -18,13 +18,15 @@ import {
   getAllCharacteristics, 
   getAllValues, 
   getModelCountForValue,
+  getValueUsages,
+  type ValueUsageRow,
   type UnifiedItem
 } from "@/lib/product-database"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { useState, useMemo } from "react"
-import { Plus, Check, ShoppingCart, CheckCircle2 } from "lucide-react"
+import { Plus, Check, ShoppingCart, CheckCircle2, X } from "lucide-react"
 import type { ColumnConfig } from "@/components/column-settings-panel"
 
 export const levelColors: Record<AllLevels, string> = {
@@ -87,6 +89,7 @@ export function RequesterTranslationTable({
   const [editingCell, setEditingCell] = useState<{ id: string; field: 'nameFr' | 'descriptionFr' } | null>(null)
   const [editedValues, setEditedValues] = useState<Map<string, { nameFr?: string; descriptionFr?: string }>>(new Map())
   const [displayedRows, setDisplayedRows] = useState(itemsPerPage)
+  const [valueDrawer, setValueDrawer] = useState<{ valueId: string; valueName: string; usages: ValueUsageRow[] } | null>(null)
   
   const handleCellClick = (id: string, field: 'nameFr' | 'descriptionFr') => {
     setEditingCell({ id, field })
@@ -214,6 +217,8 @@ export function RequesterTranslationTable({
   }
 
   data.forEach((item) => {
+    if (item.type === "Rayon" || item.type === "Sous-Rayon" || item.type === "Regroupement") return
+
     flattenedData.push({ item, type: item.type, indent: 0 })
     
     if (item.type === "Modèle") {
@@ -434,7 +439,20 @@ export function RequesterTranslationTable({
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground font-mono text-sm">
-                    <span style={{ paddingLeft: `${indent * 1.5}rem` }}>{item.id}</span>
+                    {type === "Valeur" ? (
+                      <button
+                        style={{ paddingLeft: `${indent * 1.5}rem` }}
+                        className="text-primary underline underline-offset-2 hover:text-primary/80 transition-colors font-mono text-sm"
+                        onClick={() => {
+                          const usages = getValueUsages(item.id)
+                          setValueDrawer({ valueId: item.id, valueName: item.nameFr || item.nameEn || item.id, usages })
+                        }}
+                      >
+                        {item.id}
+                      </button>
+                    ) : (
+                      <span style={{ paddingLeft: `${indent * 1.5}rem` }}>{item.id}</span>
+                    )}
                   </TableCell>
                   <TableCell 
                     className={cn("font-medium cursor-pointer", !getDisplayValue(item, 'nameFr') && "bg-amber-200 text-amber-700 italic")}
@@ -585,6 +603,85 @@ export function RequesterTranslationTable({
             Charger plus de lignes ({finalData.length - displayedRows} restantes)
           </button>
         </div>
+      )}
+
+      {/* Value usage drawer */}
+      {valueDrawer && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/20 z-40"
+            onClick={() => setValueDrawer(null)}
+          />
+          <div className="fixed right-0 top-0 h-full w-1/2 bg-card border-l border-border shadow-xl z-50 flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-border">
+              <div>
+                <p className="text-xs text-muted-foreground font-mono mb-0.5">{valueDrawer.valueId}</p>
+                <h2 className="text-lg font-semibold text-foreground">{valueDrawer.valueName}</h2>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setValueDrawer(null)}
+                className="h-8 w-8 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Summary */}
+            <div className="px-6 py-4 border-b border-border bg-muted/30">
+              <p className="text-sm text-muted-foreground">
+                Utilise <span className="font-semibold text-foreground">{valueDrawer.usages.length}</span> fois dans la nomenclature
+              </p>
+            </div>
+
+            {/* Table */}
+            <div className="flex-1 overflow-y-auto">
+              {valueDrawer.usages.length === 0 ? (
+                <p className="text-sm text-muted-foreground p-6">Aucune utilisation trouvee.</p>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-muted/80 border-b border-border">
+                    <tr>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">ID Modele</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Nom du modele FR</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Nom du modele EN</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">ID Carac.</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Nom carac. FR</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Nom carac. EN</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {valueDrawer.usages.map((row, i) => (
+                      <tr
+                        key={`${row.modelId}-${row.characteristicId}`}
+                        className={cn(
+                          "border-b border-border last:border-0",
+                          i % 2 === 0 ? "bg-card" : "bg-muted/20"
+                        )}
+                      >
+                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground whitespace-nowrap">{row.modelId}</td>
+                        <td className="px-4 py-3 font-medium text-foreground">{row.modelNameFr || <span className="text-muted-foreground italic">—</span>}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{row.modelNameEn || <span className="italic">—</span>}</td>
+                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground whitespace-nowrap">{row.characteristicId}</td>
+                        <td className="px-4 py-3 font-medium text-foreground">{row.characteristicNameFr || <span className="text-muted-foreground italic">—</span>}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{row.characteristicNameEn || <span className="italic">—</span>}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-border">
+              <Button onClick={() => setValueDrawer(null)} className="w-full">
+                Fermer
+              </Button>
+            </div>
+          </div>
+        </>
       )}
     </>
   )

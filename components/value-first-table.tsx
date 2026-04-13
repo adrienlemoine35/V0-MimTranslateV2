@@ -23,7 +23,7 @@ interface ValueFirstTableProps {
 }
 
 const levelColors: Record<string, string> = {
-  "Valeur": "bg-pink-100 text-pink-800",
+  "Valeur": "bg-red-100 text-red-800",
   "Caractéristique": "bg-purple-100 text-purple-800",
   "Modèle": "bg-violet-100 text-violet-800",
 }

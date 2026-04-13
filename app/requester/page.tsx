@@ -14,25 +14,25 @@ import {
   XCircle,
   ArrowLeft,
   Trash2,
-  Settings
+  Settings,
+  X,
 } from "lucide-react"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { RequesterTranslationTable } from "@/components/requester-translation-table"
-import { ValueFirstTable } from "@/components/value-first-table"
-import { TypeFilterAccordion } from "@/components/type-filter-accordion"
 import { RequestBasket } from "@/components/request-basket"
 import { RequestHistory } from "@/components/request-history"
 import { ColumnSettingsPanel, type ColumnConfig } from "@/components/column-settings-panel"
 import { ToggleButton } from "@/components/ui/toggle-button"
+import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
+import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { 
   productDatabase, 
   buildCategoryTree, 
   getAllUnifiedItems,
-  getValueFirstView,
   type ProductItem,
   type UnifiedItem 
 } from "@/lib/product-database"
@@ -49,7 +49,6 @@ import {
 } from "@/lib/validation-store"
 
 type ViewTab = "translate" | "basket" | "history"
-type ViewMode = "hierarchy" | "value-first"
 
 interface TranslationStatus {
   isLoading: boolean
@@ -61,10 +60,9 @@ interface TranslationStatus {
 export default function RequesterPage() {
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState<ViewTab>("translate")
-  const [viewMode, setViewMode] = useState<ViewMode>("hierarchy")
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [showFilter, setShowFilter] = useState(true)
-  const [isFilterCollapsed, setIsFilterCollapsed] = useState(false)
+  const [selectedRayonIds, setSelectedRayonIds] = useState<Set<string>>(new Set())
+  const [pendingRayonIds, setPendingRayonIds] = useState<Set<string>>(new Set())
+  const [showFilterDrawer, setShowFilterDrawer] = useState(false)
   const [showMissingOnly, setShowMissingOnly] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [refreshKey, setRefreshKey] = useState(0)
@@ -85,7 +83,9 @@ export default function RequesterPage() {
   
   const categoryTree = useMemo(() => buildCategoryTree(), [])
   const allUnifiedItems = useMemo(() => getAllUnifiedItems(), [])
-  const valueFirstData = useMemo(() => getValueFirstView(), [])
+  
+  // Extract top-level Rayons
+  const rayons = useMemo(() => categoryTree.filter(node => node.level === "Rayon"), [categoryTree])
   
   // Get current draft request
   const draftRequest = useMemo(() => {
@@ -102,16 +102,16 @@ export default function RequesterPage() {
     return getAllRequests()
   }, [refreshKey])
   
-  // Helper to get all descendants of selected IDs
-  const getAllDescendantsOfSelected = useCallback(() => {
-    if (selectedIds.size === 0) return new Set<string>()
+  // Get all descendant IDs for the selected Rayons
+  const getAllDescendantsOfRayons = useCallback(() => {
+    if (selectedRayonIds.size === 0) return new Set<string>()
     
-    const result = new Set<string>(selectedIds)
+    const result = new Set<string>(selectedRayonIds)
     
     productDatabase.forEach(item => {
       let current: ProductItem | undefined = item
       while (current && current.parentId) {
-        if (selectedIds.has(current.parentId)) {
+        if (selectedRayonIds.has(current.parentId)) {
           result.add(item.id)
           break
         }
@@ -120,7 +120,7 @@ export default function RequesterPage() {
     })
     
     return result
-  }, [selectedIds])
+  }, [selectedRayonIds])
   
   // Store original values before any translation (including characteristics and values)
   const originalValues = useMemo(() => {
@@ -144,7 +144,7 @@ export default function RequesterPage() {
     return map
   }, [allUnifiedItems])
 
-  // Filtered data
+  // Filtered data based on selected Rayons
   const filteredData = useMemo(() => {
     let data: ProductItem[] = productDatabase.map(item => {
       const translatedDesc = translationStatus.translatedItems.get(item.id)
@@ -160,38 +160,19 @@ export default function RequesterPage() {
       return item
     })
     
-    if (selectedIds.size > 0) {
-      const idsToShow = getAllDescendantsOfSelected()
+    if (selectedRayonIds.size > 0) {
+      const idsToShow = getAllDescendantsOfRayons()
       data = data.filter(item => idsToShow.has(item.id))
     }
     
-    // Note: showMissingOnly, showModifiedOnly, and searchQuery filters 
-    // are applied in the table component after flattening all data types
-    
     return data
-  }, [selectedIds, translationStatus.translatedItems, translationStatus.translatedNames, getAllDescendantsOfSelected])
+  }, [selectedRayonIds, translationStatus.translatedItems, translationStatus.translatedNames, getAllDescendantsOfRayons])
 
-  // Filtered data for value-first view
-  const filteredValueFirstData = useMemo(() => {
-    let data = valueFirstData
-    
-    if (showMissingOnly) {
-      data = data.filter(({ value }) => !value.nameFr || !value.descriptionFr)
-    }
-    
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase()
-      data = data.filter(({ value }) => 
-        value.nameFr?.toLowerCase().includes(query) ||
-        value.nameEn?.toLowerCase().includes(query) ||
-        value.descriptionFr?.toLowerCase().includes(query) ||
-        value.descriptionEn?.toLowerCase().includes(query) ||
-        value.id?.toLowerCase().includes(query)
-      )
-    }
-    
-    return data
-  }, [valueFirstData, showMissingOnly, searchQuery])
+  // selectedIds passed to table (derived from rayon filter)
+  const selectedIds = useMemo(() => {
+    if (selectedRayonIds.size === 0) return new Set<string>()
+    return getAllDescendantsOfRayons()
+  }, [selectedRayonIds, getAllDescendantsOfRayons])
 
   // Items with modifications (translated or edited) - must be defined before handleBulkAddToBasket
   // Count all modified items from the entire database, not just filtered data
@@ -475,33 +456,13 @@ export default function RequesterPage() {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-4">
                   <h2 className="text-lg font-semibold text-foreground">
-                    {viewMode === "hierarchy"
-                      ? `Catalogue produits (${filteredData.length} elements)`
-                      : `Vue Value First (${filteredValueFirstData.length} valeurs)`
-                    }
+                    {`Catalogue produits (${filteredData.length} elements)`}
                   </h2>
-                  <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
-                    <button
-                      onClick={() => setViewMode("hierarchy")}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                        viewMode === "hierarchy"
-                          ? "bg-card text-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      Hierarchie
-                    </button>
-                    <button
-                      onClick={() => setViewMode("value-first")}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                        viewMode === "value-first"
-                          ? "bg-card text-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      Value First
-                    </button>
-                  </div>
+                  {selectedRayonIds.size > 0 && (
+                    <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
+                      {selectedRayonIds.size} rayon{selectedRayonIds.size > 1 ? "s" : ""} filtre{selectedRayonIds.size > 1 ? "s" : ""}
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-3">
                   <button
@@ -539,11 +500,22 @@ export default function RequesterPage() {
                     Modifiees uniquement ({itemsWithModifications.length})
                   </ToggleButton>
                   <button
-                    onClick={() => setShowFilter(!showFilter)}
-                    className="flex items-center gap-2 px-3 py-2 text-sm bg-card border border-border rounded-lg hover:bg-muted transition-colors"
+                    onClick={() => {
+                      setPendingRayonIds(new Set(selectedRayonIds))
+                      setShowFilterDrawer(true)
+                    }}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2 text-sm bg-card border border-border rounded-lg hover:bg-muted transition-colors",
+                      selectedRayonIds.size > 0 && "border-primary text-primary"
+                    )}
                   >
                     <Filter className="w-4 h-4" />
-                    {showFilter ? "Masquer filtres" : "Afficher filtres"}
+                    Afficher filtres
+                    {selectedRayonIds.size > 0 && (
+                      <span className="bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded-full leading-none">
+                        {selectedRayonIds.size}
+                      </span>
+                    )}
                   </button>
                   <button
                     onClick={() => setShowColumnSettings(true)}
@@ -575,42 +547,98 @@ export default function RequesterPage() {
               </div>
 
               <div className="flex gap-4">
-                {showFilter && viewMode === "hierarchy" && (
-                  <TypeFilterAccordion
-                    categoryTree={categoryTree}
-                    selectedIds={selectedIds}
-                    onSelectionChange={setSelectedIds}
-                    isCollapsed={isFilterCollapsed}
-                    onToggleCollapse={() => setIsFilterCollapsed(!isFilterCollapsed)}
-                  />
-                )}
-                
                 <div className="flex-1 min-w-0 overflow-auto">
-                  {viewMode === "hierarchy" ? (
-                    <RequesterTranslationTable 
-                      data={filteredData} 
-                      selectedIds={selectedIds} 
-                      showMissingOnly={showMissingOnly}
-                      showModifiedOnly={showModifiedOnly}
-                      translatedNames={translationStatus.translatedNames}
-                      translatedDescriptions={translationStatus.translatedItems}
-                      searchQuery={searchQuery}
-                      onAddToBasket={handleAddToBasket}
-                      onRemoveFromBasket={handleRemoveFromBasket}
-                      onBulkAddToBasket={handleBulkAddToBasket}
-                      isItemInBasket={isItemInDraft}
-                      modifiedItemsCount={itemsWithModifications.length}
-                      columnConfig={columnConfig}
-                    />
-                  ) : (
-                    <ValueFirstTable 
-                      data={filteredValueFirstData}
-                      translatedItems={translationStatus.translatedItems}
-                      translatedNames={translationStatus.translatedNames}
-                    />
-                  )}
+                  <RequesterTranslationTable 
+                    data={filteredData} 
+                    selectedIds={selectedIds} 
+                    showMissingOnly={showMissingOnly}
+                    showModifiedOnly={showModifiedOnly}
+                    translatedNames={translationStatus.translatedNames}
+                    translatedDescriptions={translationStatus.translatedItems}
+                    searchQuery={searchQuery}
+                    onAddToBasket={handleAddToBasket}
+                    onRemoveFromBasket={handleRemoveFromBasket}
+                    onBulkAddToBasket={handleBulkAddToBasket}
+                    isItemInBasket={isItemInDraft}
+                    modifiedItemsCount={itemsWithModifications.length}
+                    columnConfig={columnConfig}
+                  />
                 </div>
               </div>
+
+              {/* Rayon Filter Drawer */}
+              {showFilterDrawer && (
+                <>
+                  <div
+                    className="fixed inset-0 bg-black/20 z-40"
+                    onClick={() => setShowFilterDrawer(false)}
+                  />
+                  <div className="fixed right-0 top-0 h-full w-1/2 bg-card border-l border-border shadow-xl z-50 flex flex-col">
+                    <div className="flex items-center justify-between p-6 border-b border-border">
+                      <h2 className="text-lg font-semibold text-foreground">Filtrer par Rayon</h2>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowFilterDrawer(false)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-6">
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Selectionnez un ou plusieurs rayons pour filtrer le tableau.
+                      </p>
+                      <div className="space-y-2">
+                        {rayons.map(rayon => (
+                          <label
+                            key={rayon.id}
+                            className="flex items-center gap-3 p-3 bg-muted rounded-lg cursor-pointer hover:bg-muted/70 transition-colors"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={pendingRayonIds.has(rayon.id)}
+                              onChange={() => {
+                                setPendingRayonIds(prev => {
+                                  const next = new Set(prev)
+                                  if (next.has(rayon.id)) {
+                                    next.delete(rayon.id)
+                                  } else {
+                                    next.add(rayon.id)
+                                  }
+                                  return next
+                                })
+                              }}
+                              className="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
+                            />
+                            <span className="flex-1 text-sm font-medium text-foreground">
+                              {rayon.nameFr}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="p-6 border-t border-border flex gap-3">
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => setPendingRayonIds(new Set())}
+                      >
+                        Tout effacer
+                      </Button>
+                      <Button
+                        className="flex-1"
+                        onClick={() => {
+                          setSelectedRayonIds(new Set(pendingRayonIds))
+                          setShowFilterDrawer(false)
+                        }}
+                      >
+                        Valider
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              )}
             </>
           )}
 
