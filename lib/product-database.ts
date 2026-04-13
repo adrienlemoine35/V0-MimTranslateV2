@@ -1366,6 +1366,43 @@ export function getModelsForCharacteristic(characteristicId: string): ProductIte
   return productDatabase.filter(p => characteristic.modelIds.includes(p.id))
 }
 
+// Usage row: one model + one characteristic where the value is used
+export interface ValueUsageRow {
+  modelId: string
+  modelNameFr: string
+  modelNameEn: string
+  characteristicId: string
+  characteristicNameFr: string
+  characteristicNameEn: string
+}
+
+export function getValueUsages(valueId: string): ValueUsageRow[] {
+  const value = valuesDatabase.find(v => v.id === valueId)
+  if (!value) return []
+
+  const rows: ValueUsageRow[] = []
+
+  value.characteristicIds.forEach(charId => {
+    const char = characteristicsDatabase.find(c => c.id === charId)
+    if (!char) return
+
+    char.modelIds.forEach(modelId => {
+      const model = productDatabase.find(p => p.id === modelId)
+      if (!model) return
+      rows.push({
+        modelId: model.id,
+        modelNameFr: model.nameFr,
+        modelNameEn: model.nameEn,
+        characteristicId: char.id,
+        characteristicNameFr: char.nameFr,
+        characteristicNameEn: char.nameEn,
+      })
+    })
+  })
+
+  return rows
+}
+
 // Value-first view: Get all values with their linked characteristics and models
 export interface ValueFirstView {
   value: CharacteristicValue
