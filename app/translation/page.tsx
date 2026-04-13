@@ -157,7 +157,8 @@ export default function Translation() {
 
   // Count characteristics missing translations
   const characteristicsMissingCount = useMemo(() => {
-    return characteristicsData.filter(char => !char.nameFr || !char.descriptionFr).length
+    const count = characteristicsData.filter(char => !char.nameFr || !char.descriptionFr).length
+    return count
   }, [characteristicsData])
 
   // Get items that would actually be shown in the table (after selection filter)
