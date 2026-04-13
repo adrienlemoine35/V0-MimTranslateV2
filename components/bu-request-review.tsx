@@ -17,12 +17,8 @@ import {
   Check, 
   X, 
   Edit3, 
-  CheckCircle2,
   AlertCircle,
-  Send,
-  ChevronDown,
-  ChevronRight,
-  ArrowRight
+  Send
 } from "lucide-react"
 import type { ValidationRequest, TranslationItem, ItemStatus } from "@/lib/validation-store"
 
@@ -58,7 +54,6 @@ export function BURequestReview({
   const [editingItem, setEditingItem] = useState<string | null>(null)
   const [editValues, setEditValues] = useState<{ nameFr: string; descriptionFr: string }>({ nameFr: '', descriptionFr: '' })
   const [comment, setComment] = useState(request.buComment || '')
-  const [expandedValues, setExpandedValues] = useState<Set<string>>(new Set())
 
   // Count items by status
   const pendingCount = request.items.filter(i => i.status === 'pending').length
@@ -159,21 +154,17 @@ export function BURequestReview({
         </div>
       )}
 
-      {/* Items table */}
+      {/* Items table - Same structure as TranslationTable */}
       <div className="bg-card rounded-lg border border-border overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
-              <TableHead className="font-semibold text-foreground w-12"></TableHead>
-              <TableHead className="font-semibold text-foreground w-24">Type</TableHead>
+              <TableHead className="font-semibold text-foreground w-32">Type</TableHead>
               <TableHead className="font-semibold text-foreground w-24">ID</TableHead>
-              <TableHead className="font-semibold text-foreground" colSpan={2}>
-                <div className="flex items-center justify-center gap-2 text-center">
-                  <span className="flex-1 text-right">AVANT</span>
-                  <ArrowRight className="w-4 h-4 text-muted-foreground" />
-                  <span className="flex-1 text-left">APRÈS</span>
-                </div>
-              </TableHead>
+              <TableHead className="font-semibold text-foreground">Name FR</TableHead>
+              <TableHead className="font-semibold text-foreground">Name EN</TableHead>
+              <TableHead className="font-semibold text-foreground">Description FR</TableHead>
+              <TableHead className="font-semibold text-foreground">Description EN</TableHead>
               <TableHead className="font-semibold text-foreground w-28 text-center">Statut</TableHead>
               <TableHead className="font-semibold text-foreground w-32 text-center">Actions</TableHead>
             </TableRow>
@@ -182,217 +173,169 @@ export function BURequestReview({
             {request.items.map((item) => {
               const statusInfo = itemStatusConfig[item.status]
               const isEditing = editingItem === item.id
-              const isValue = item.itemType === "Valeur"
-              const isExpanded = expandedValues.has(item.id)
 
               return (
-                <>
-                  <TableRow 
-                    key={item.id} 
-                    className={cn(
-                      "hover:bg-muted/30",
-                      item.status === 'pending' && "bg-amber-50/50",
-                      item.status === 'approved' && "bg-green-50/50",
-                      item.status === 'modified' && "bg-blue-50/50",
-                      item.status === 'rejected' && "bg-red-50/50"
-                    )}
-                  >
-                    {/* Chevron for Values */}
-                    <TableCell className="px-2">
-                      {isValue && (
-                        <button
-                          onClick={() => {
-                            const newExpanded = new Set(expandedValues)
-                            if (isExpanded) {
-                              newExpanded.delete(item.id)
-                            } else {
-                              newExpanded.add(item.id)
-                            }
-                            setExpandedValues(newExpanded)
-                          }}
-                          className="p-1 hover:bg-muted rounded transition-colors"
-                        >
-                          {isExpanded ? (
-                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                          ) : (
-                            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                          )}
-                        </button>
-                      )}
-                    </TableCell>
-
-                    {/* Type */}
-                    <TableCell>
+                <TableRow 
+                  key={item.id} 
+                  className={cn(
+                    "hover:bg-muted/30",
+                    item.status === 'pending' && "bg-amber-50/50",
+                    item.status === 'approved' && "bg-green-50/50",
+                    item.status === 'modified' && "bg-blue-50/50",
+                    item.status === 'rejected' && "bg-red-50/50"
+                  )}
+                >
+                  {/* Type */}
+                  <TableCell>
+                    <div className="flex items-center gap-2">
                       <span className={cn("text-xs px-2 py-1 rounded font-medium whitespace-nowrap", levelColors[item.itemType] || "bg-gray-100 text-gray-800")}>
                         {item.itemType}
                       </span>
-                    </TableCell>
+                    </div>
+                  </TableCell>
 
-                    {/* ID + EN Reference */}
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="text-muted-foreground font-mono text-xs">{item.itemId}</div>
-                        <div className="text-xs text-muted-foreground/70 italic">
-                          <div className="truncate max-w-[120px]" title={item.nameEn}>EN: {item.nameEn}</div>
-                        </div>
-                      </div>
-                    </TableCell>
+                  {/* ID */}
+                  <TableCell className="text-muted-foreground font-mono text-sm">
+                    {item.itemId}
+                  </TableCell>
 
-                    {/* AVANT (Original FR) */}
-                    <TableCell className="border-r-2 border-border bg-red-50/30">
-                      <div className="space-y-3">
-                        <div>
-                          <div className="text-xs font-medium text-muted-foreground mb-1">Name FR</div>
-                          <div className="text-sm">
-                            {item.originalNameFr || <span className="italic text-muted-foreground">Vide</span>}
-                          </div>
+                  {/* Name FR - Before/After */}
+                  <TableCell className="font-medium">
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editValues.nameFr}
+                        onChange={(e) => setEditValues(v => ({ ...v, nameFr: e.target.value }))}
+                        className="w-full px-2 py-1.5 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-primary"
+                        placeholder="Nom FR"
+                      />
+                    ) : (
+                      <div className="space-y-1.5">
+                        {/* Original (before) */}
+                        <div className="flex items-start gap-2">
+                          <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide min-w-[45px] mt-0.5">Avant:</span>
+                          <span className="text-sm text-red-700 line-through opacity-70">
+                            {item.originalNameFr || <span className="italic text-muted-foreground">-</span>}
+                          </span>
                         </div>
-                        <div>
-                          <div className="text-xs font-medium text-muted-foreground mb-1">Description FR</div>
-                          <div className="text-xs text-muted-foreground max-w-xs">
-                            {item.originalDescriptionFr || <span className="italic">Vide</span>}
-                          </div>
-                        </div>
-                      </div>
-                    </TableCell>
-
-                    {/* APRÈS (Proposition + Final) */}
-                    <TableCell className="bg-green-50/30">
-                      {isEditing ? (
-                        <div className="space-y-3">
-                          <div>
-                            <label className="text-xs font-medium text-muted-foreground mb-1 block">Name FR</label>
-                            <input
-                              type="text"
-                              value={editValues.nameFr}
-                              onChange={(e) => setEditValues(v => ({ ...v, nameFr: e.target.value }))}
-                              className="w-full px-2 py-1.5 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-primary"
-                              placeholder="Nom FR"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-xs font-medium text-muted-foreground mb-1 block">Description FR</label>
-                            <textarea
-                              value={editValues.descriptionFr}
-                              onChange={(e) => setEditValues(v => ({ ...v, descriptionFr: e.target.value }))}
-                              className="w-full px-2 py-1.5 text-xs border border-border rounded focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-                              placeholder="Description FR"
-                              rows={2}
-                            />
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          {/* Name FR */}
-                          <div>
-                            <div className="text-xs font-medium text-muted-foreground mb-1">Name FR</div>
-                            <div className="text-sm font-medium text-blue-700">
-                              {item.proposedNameFr || <span className="italic text-muted-foreground">Non modifié</span>}
+                        {/* Proposed/Final (after) */}
+                        <div className="flex items-start gap-2">
+                          <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide min-w-[45px] mt-0.5">Après:</span>
+                          <div className="flex-1">
+                            <div className="text-sm font-medium text-green-700">
+                              {(item.finalNameFr || item.proposedNameFr) || <span className="italic text-muted-foreground">-</span>}
                             </div>
                             {item.finalNameFr && item.finalNameFr !== item.proposedNameFr && (
-                              <div className="mt-1 text-sm border-l-2 border-green-600 pl-2 bg-green-50 py-1">
-                                <div className="text-xs text-green-700 font-medium">→ Corrigé par BU:</div>
-                                <div className="text-green-800 font-medium">{item.finalNameFr}</div>
-                              </div>
+                              <div className="text-xs text-blue-600 mt-0.5 italic">(modifié par BU)</div>
                             )}
                           </div>
+                        </div>
+                      </div>
+                    )}
+                  </TableCell>
 
-                          {/* Description FR */}
-                          <div>
-                            <div className="text-xs font-medium text-muted-foreground mb-1">Description FR</div>
-                            <div className="text-xs text-blue-700 max-w-xs">
-                              {item.proposedDescriptionFr || <span className="italic text-muted-foreground">Non modifié</span>}
+                  {/* Name EN */}
+                  <TableCell>{item.nameEn}</TableCell>
+
+                  {/* Description FR - Before/After */}
+                  <TableCell className="max-w-xs text-sm">
+                    {isEditing ? (
+                      <textarea
+                        value={editValues.descriptionFr}
+                        onChange={(e) => setEditValues(v => ({ ...v, descriptionFr: e.target.value }))}
+                        className="w-full px-2 py-1.5 text-xs border border-border rounded focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                        placeholder="Description FR"
+                        rows={3}
+                      />
+                    ) : (
+                      <div className="space-y-1.5">
+                        {/* Original (before) */}
+                        <div className="flex items-start gap-2">
+                          <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide min-w-[45px] mt-0.5 flex-shrink-0">Avant:</span>
+                          <div className="text-xs text-red-700 line-through opacity-70 truncate">
+                            {item.originalDescriptionFr || <span className="italic text-muted-foreground">-</span>}
+                          </div>
+                        </div>
+                        {/* Proposed/Final (after) */}
+                        <div className="flex items-start gap-2">
+                          <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide min-w-[45px] mt-0.5 flex-shrink-0">Après:</span>
+                          <div className="flex-1">
+                            <div className="text-xs text-green-700 truncate">
+                              {(item.finalDescriptionFr || item.proposedDescriptionFr) || <span className="italic text-muted-foreground">-</span>}
                             </div>
                             {item.finalDescriptionFr && item.finalDescriptionFr !== item.proposedDescriptionFr && (
-                              <div className="mt-1 text-xs border-l-2 border-green-600 pl-2 bg-green-50 py-1">
-                                <div className="text-xs text-green-700 font-medium">→ Corrigé par BU:</div>
-                                <div className="text-green-800">{item.finalDescriptionFr}</div>
-                              </div>
+                              <div className="text-[10px] text-blue-600 mt-0.5 italic">(modifié par BU)</div>
                             )}
                           </div>
                         </div>
-                      )}
-                    </TableCell>
+                      </div>
+                    )}
+                  </TableCell>
 
-                    {/* Status */}
-                    <TableCell className="text-center">
-                      <Badge className={cn("text-xs", statusInfo.className)}>
-                        {statusInfo.label}
-                      </Badge>
-                    </TableCell>
+                  {/* Description EN */}
+                  <TableCell className="max-w-xs truncate text-sm">{item.descriptionEn}</TableCell>
 
-                    {/* Actions */}
-                    <TableCell className="text-center">
-                      {isEditing ? (
-                        <div className="flex items-center justify-center gap-1">
-                          <button
-                            onClick={() => handleSaveEdit(item)}
-                            className="p-1.5 text-green-600 hover:bg-green-50 rounded transition-colors"
-                            title="Sauvegarder"
-                          >
-                            <Check className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={handleCancelEdit}
-                            className="p-1.5 text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                            title="Annuler"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ) : item.status === 'pending' ? (
-                        <div className="flex items-center justify-center gap-1">
-                          <button
-                            onClick={() => handleApprove(item)}
-                            className="p-1.5 text-green-600 hover:bg-green-50 rounded transition-colors"
-                            title="Approuver"
-                          >
-                            <Check className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleStartEdit(item)}
-                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                            title="Modifier"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleReject(item)}
-                            className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
-                            title="Refuser"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ) : (
+                  {/* Status */}
+                  <TableCell className="text-center">
+                    <Badge className={cn("text-xs", statusInfo.className)}>
+                      {statusInfo.label}
+                    </Badge>
+                  </TableCell>
+
+                  {/* Actions */}
+                  <TableCell className="text-center">
+                    {isEditing ? (
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={() => handleSaveEdit(item)}
+                          className="p-1.5 text-green-600 hover:bg-green-50 rounded transition-colors"
+                          title="Sauvegarder"
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={handleCancelEdit}
+                          className="p-1.5 text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                          title="Annuler"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : item.status === 'pending' ? (
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={() => handleApprove(item)}
+                          className="p-1.5 text-green-600 hover:bg-green-50 rounded transition-colors"
+                          title="Approuver"
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
                         <button
                           onClick={() => handleStartEdit(item)}
-                          className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
                           title="Modifier"
                         >
                           <Edit3 className="w-4 h-4" />
                         </button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-
-                  {/* Expanded context for Values */}
-                  {isValue && isExpanded && (
-                    <TableRow className="bg-purple-50/30">
-                      <TableCell colSpan={7} className="py-3">
-                        <div className="pl-8 space-y-2">
-                          <div className="text-xs font-semibold text-purple-700 mb-2">Contexte de la valeur</div>
-                          <div className="text-sm text-muted-foreground">
-                            <span className="font-medium">Caractéristique:</span> {item.contextCharacteristic || 'Non spécifié'}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            <span className="font-medium">Modèle:</span> {item.contextModel || 'Non spécifié'}
-                          </div>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </>
+                        <button
+                          onClick={() => handleReject(item)}
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                          title="Refuser"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => handleStartEdit(item)}
+                        className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                        title="Modifier"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </TableCell>
+                </TableRow>
               )
             })}
           </TableBody>
