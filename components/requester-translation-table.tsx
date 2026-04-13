@@ -214,6 +214,8 @@ export function RequesterTranslationTable({
   }
 
   data.forEach((item) => {
+    if (item.type === "Rayon" || item.type === "Sous-Rayon" || item.type === "Regroupement") return
+
     flattenedData.push({ item, type: item.type, indent: 0 })
     
     if (item.type === "Modèle") {
