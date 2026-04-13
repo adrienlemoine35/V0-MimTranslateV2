@@ -359,17 +359,6 @@ export default function Translation() {
                   Hierarchie
                 </button>
                 <button
-                  onClick={() => setViewMode("value-first")}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors ${
-                    viewMode === "value-first"
-                      ? "bg-card text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <Layers className="w-4 h-4" />
-                  Value First
-                </button>
-                <button
                   onClick={() => setViewMode("characteristic")}
                   className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors ${
                     viewMode === "characteristic"
@@ -379,6 +368,17 @@ export default function Translation() {
                 >
                   <Layers className="w-4 h-4" />
                   Caractéristique ({characteristicsMissingCount})
+                </button>
+                <button
+                  onClick={() => setViewMode("value-first")}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors ${
+                    viewMode === "value-first"
+                      ? "bg-card text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Layers className="w-4 h-4" />
+                  Value First
                 </button>
               </div>
             </div>
